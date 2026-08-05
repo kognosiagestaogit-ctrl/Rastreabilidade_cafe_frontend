@@ -95,6 +95,15 @@ export function calculateLoteStatus(form: {
   return "EM_COLHEITA";
 }
 
+export function hasPendingData(lote: Lote): boolean {
+  const isTerreiroPending = lote.status === "NO_TERREIRO" && !lote.data_entrada_terreiro;
+  const isSecadorPending =
+    lote.status === "NO_SECADOR" && (!lote.data_entrada_secador || lote.umidade == null);
+  const isTulhaPending = lote.status === "NA_TULHA" && !lote.numero_tulha;
+  const isBeneficiadoPending = lote.status === "BENEFICIADO" && !lote.data_beneficio;
+  return isTerreiroPending || isSecadorPending || isTulhaPending || isBeneficiadoPending;
+}
+
 function LotesPage() {
   const { fazendaAtual, fazendas } = useFazendas();
   const qc = useQueryClient();
@@ -133,6 +142,13 @@ function LotesPage() {
 
     const currentIndex = STATUS_ORDER.indexOf(lote.status);
     const newIndex = STATUS_ORDER.indexOf(newStatus);
+
+    if (newIndex > currentIndex && hasPendingData(lote)) {
+      toast.error(
+        "Este lote possui informações pendentes na etapa atual (em vermelho). Clique no lote e preencha as informações antes de avançar.",
+      );
+      return;
+    }
 
     if (newIndex < currentIndex) {
       if (
@@ -262,6 +278,12 @@ function LotesPage() {
                           key={l.id}
                           lote={l}
                           onAdvance={() => {
+                            if (hasPendingData(l)) {
+                              toast.error(
+                                "Este lote possui informações pendentes na etapa atual (em vermelho). Clique no lote e preencha as informações antes de avançar.",
+                              );
+                              return;
+                            }
                             const idx = STATUS_ORDER.indexOf(l.status);
                             const next = STATUS_ORDER[idx + 1];
                             if (next) moveMut.mutate({ id: l.id, status: next });
@@ -291,11 +313,7 @@ function LoteCard({
   onAdvance: () => void;
   onEdit: () => void;
 }) {
-  const isTerreiroPending = lote.status === "NO_TERREIRO" && !lote.data_entrada_terreiro;
-  const isSecadorPending =
-    lote.status === "NO_SECADOR" && (!lote.data_entrada_secador || !lote.umidade);
-  const isTulhaPending = lote.status === "NA_TULHA" && !lote.numero_tulha;
-  const hasPending = isTerreiroPending || isSecadorPending || isTulhaPending;
+  const hasPending = hasPendingData(lote);
 
   const umidadeForaIdeal =
     lote.umidade != null && (Number(lote.umidade) < 10.5 || Number(lote.umidade) > 12);
