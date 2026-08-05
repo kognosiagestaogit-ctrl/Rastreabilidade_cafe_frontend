@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus, Coffee, ArrowRight, Droplets, Calendar, AlertTriangle, Search, Trash2, Table2, LayoutGrid } from "lucide-react";
+import { Plus, Coffee, ArrowRight, Droplets, Calendar, AlertTriangle, Search, Trash2, Table2, LayoutGrid, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
@@ -48,6 +48,44 @@ const schema = z.object({
   numero_sacas: z.string().optional().or(z.literal("")),
   observacoes: z.string().max(1000).optional().or(z.literal("")),
 });
+
+export function calculateLoteStatus(form: {
+  data_entrada_terreiro?: string | null;
+  data_saida_terreiro?: string | null;
+  data_entrada_secador?: string | null;
+  data_saida_secador?: string | null;
+  umidade?: string | number | null;
+  numero_tulha?: string | null;
+  data_beneficio?: string | null;
+  data_envio_cooperativa?: string | null;
+  numero_lote_cooperativa?: string | null;
+  nf_remessa_cooperativa?: string | null;
+}): LoteStatus {
+  if (
+    form.data_envio_cooperativa ||
+    form.numero_lote_cooperativa ||
+    form.nf_remessa_cooperativa
+  ) {
+    return "ENVIADO_COOPERATIVA";
+  }
+  if (form.data_beneficio) {
+    return "BENEFICIADO";
+  }
+  if (form.numero_tulha) {
+    return "NA_TULHA";
+  }
+  if (
+    form.data_entrada_secador ||
+    form.data_saida_secador ||
+    (form.umidade !== "" && form.umidade !== null)
+  ) {
+    return "NO_SECADOR";
+  }
+  if (form.data_entrada_terreiro || form.data_saida_terreiro) {
+    return "NO_TERREIRO";
+  }
+  return "EM_COLHEITA";
+}
 
 function LotesPage() {
   const { fazendaAtual, fazendas } = useFazendas();
@@ -324,11 +362,26 @@ function NovoLoteDialog({
   });
   const talhoes = talhoesQ.data ?? [];
 
+  const isColheitaPreenchida = form.numero_lote_fazenda.trim().length > 0;
+  
+  const canFillTerreiro = isColheitaPreenchida;
+  const isTerreiroPreenchido = canFillTerreiro && (!!form.data_entrada_terreiro || !!form.data_saida_terreiro);
+  
+  const canFillSecador = isTerreiroPreenchido;
+  const isSecadorPreenchido = canFillSecador && (!!form.data_entrada_secador || !!form.data_saida_secador || (form.umidade !== "" && form.umidade !== null));
+  
+  const canFillBeneficio = isSecadorPreenchido;
+  const isBeneficioPreenchido = canFillBeneficio && (!!form.numero_tulha || !!form.data_beneficio);
+  
+  const canFillCooperativa = isBeneficioPreenchido;
+
   const mut = useMutation({
     mutationFn: async () => {
       const parsed = schema.parse(form);
+      const computedStatus = calculateLoteStatus(form);
       await mockDb.createLote({
         fazenda_id: fazendaId,
+        status: computedStatus,
         talhao_id: form.talhao_ids[0] ?? null,
         talhao_ids: form.talhao_ids,
         numero_lote_fazenda: parsed.numero_lote_fazenda,
@@ -339,16 +392,16 @@ function NovoLoteDialog({
         numero_sacas: parsed.numero_sacas ? Number(parsed.numero_sacas) : null,
         observacoes: parsed.observacoes || null,
         data_colheita_fim: form.data_colheita_fim || null,
-        data_entrada_terreiro: form.data_entrada_terreiro || null,
-        data_saida_terreiro: form.data_saida_terreiro || null,
-        data_entrada_secador: form.data_entrada_secador || null,
-        data_saida_secador: form.data_saida_secador || null,
-        umidade: form.umidade ? Number(form.umidade) : null,
-        numero_tulha: form.numero_tulha || null,
-        data_beneficio: form.data_beneficio || null,
-        data_envio_cooperativa: form.data_envio_cooperativa || null,
-        numero_lote_cooperativa: form.numero_lote_cooperativa || null,
-        nf_remessa_cooperativa: form.nf_remessa_cooperativa || null,
+        data_entrada_terreiro: canFillTerreiro ? (form.data_entrada_terreiro || null) : null,
+        data_saida_terreiro: canFillTerreiro ? (form.data_saida_terreiro || null) : null,
+        data_entrada_secador: canFillSecador ? (form.data_entrada_secador || null) : null,
+        data_saida_secador: canFillSecador ? (form.data_saida_secador || null) : null,
+        umidade: canFillSecador && form.umidade ? Number(form.umidade) : null,
+        numero_tulha: canFillBeneficio ? (form.numero_tulha || null) : null,
+        data_beneficio: canFillBeneficio ? (form.data_beneficio || null) : null,
+        data_envio_cooperativa: canFillCooperativa ? (form.data_envio_cooperativa || null) : null,
+        numero_lote_cooperativa: canFillCooperativa ? (form.numero_lote_cooperativa || null) : null,
+        nf_remessa_cooperativa: canFillCooperativa ? (form.nf_remessa_cooperativa || null) : null,
       });
     },
     onSuccess: () => {
@@ -370,7 +423,9 @@ function NovoLoteDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Registrar novo lote</DialogTitle>
-          <DialogDescription>Preencha o que já tem em mãos — os campos das etapas seguintes podem ficar em branco e ser completados depois.</DialogDescription>
+          <DialogDescription>
+            Preencha os campos em sequência. As etapas seguintes são liberadas conforme você preenche a etapa atual.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid max-h-[70vh] gap-4 overflow-y-auto py-2 pr-1">
           <SectionHeader label="Colheita" />
@@ -462,59 +517,59 @@ function NovoLoteDialog({
             </div>
           )}
 
-          <SectionHeader label="Terreiro" />
+          <SectionHeader label="Terreiro" locked={!canFillTerreiro} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>Data entrada</Label>
-              <Input type="date" className="h-12 text-base" value={form.data_entrada_terreiro} onChange={(e) => setForm({ ...form, data_entrada_terreiro: e.target.value })} />
+              <Label className={!canFillTerreiro ? "opacity-50" : ""}>Data entrada</Label>
+              <Input type="date" disabled={!canFillTerreiro} className="h-12 text-base" value={form.data_entrada_terreiro} onChange={(e) => setForm({ ...form, data_entrada_terreiro: e.target.value })} />
             </div>
             <div className="grid gap-2">
-              <Label>Data saída</Label>
-              <Input type="date" className="h-12 text-base" value={form.data_saida_terreiro} onChange={(e) => setForm({ ...form, data_saida_terreiro: e.target.value })} />
+              <Label className={!canFillTerreiro ? "opacity-50" : ""}>Data saída</Label>
+              <Input type="date" disabled={!canFillTerreiro} className="h-12 text-base" value={form.data_saida_terreiro} onChange={(e) => setForm({ ...form, data_saida_terreiro: e.target.value })} />
             </div>
           </div>
 
-          <SectionHeader label="Secador" />
+          <SectionHeader label="Secador" locked={!canFillSecador} />
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-2">
-              <Label>Data entrada</Label>
-              <Input type="date" className="h-12 text-base" value={form.data_entrada_secador} onChange={(e) => setForm({ ...form, data_entrada_secador: e.target.value })} />
+              <Label className={!canFillSecador ? "opacity-50" : ""}>Data entrada</Label>
+              <Input type="date" disabled={!canFillSecador} className="h-12 text-base" value={form.data_entrada_secador} onChange={(e) => setForm({ ...form, data_entrada_secador: e.target.value })} />
             </div>
             <div className="grid gap-2">
-              <Label>Data saída</Label>
-              <Input type="date" className="h-12 text-base" value={form.data_saida_secador} onChange={(e) => setForm({ ...form, data_saida_secador: e.target.value })} />
+              <Label className={!canFillSecador ? "opacity-50" : ""}>Data saída</Label>
+              <Input type="date" disabled={!canFillSecador} className="h-12 text-base" value={form.data_saida_secador} onChange={(e) => setForm({ ...form, data_saida_secador: e.target.value })} />
             </div>
             <div className="grid gap-2">
-              <Label>Umidade (%)</Label>
-              <Input type="number" step="0.1" className="h-12 text-base" value={form.umidade} onChange={(e) => setForm({ ...form, umidade: e.target.value })} placeholder="Ideal 10,5 – 12" />
-            </div>
-          </div>
-
-          <SectionHeader label="Benefício" />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Nº Tulha</Label>
-              <Input className="h-12 text-base" value={form.numero_tulha} onChange={(e) => setForm({ ...form, numero_tulha: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Data benefício</Label>
-              <Input type="date" className="h-12 text-base" value={form.data_beneficio} onChange={(e) => setForm({ ...form, data_beneficio: e.target.value })} />
+              <Label className={!canFillSecador ? "opacity-50" : ""}>Umidade (%)</Label>
+              <Input type="number" step="0.1" disabled={!canFillSecador} className="h-12 text-base" value={form.umidade} onChange={(e) => setForm({ ...form, umidade: e.target.value })} placeholder="Ideal 10,5 – 12" />
             </div>
           </div>
 
-          <SectionHeader label="Depósito Cooperativa" />
+          <SectionHeader label="Benefício" locked={!canFillBeneficio} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>Data envio cooperativa</Label>
-              <Input type="date" className="h-12 text-base" value={form.data_envio_cooperativa} onChange={(e) => setForm({ ...form, data_envio_cooperativa: e.target.value })} />
+              <Label className={!canFillBeneficio ? "opacity-50" : ""}>Nº Tulha</Label>
+              <Input disabled={!canFillBeneficio} className="h-12 text-base" value={form.numero_tulha} onChange={(e) => setForm({ ...form, numero_tulha: e.target.value })} />
             </div>
             <div className="grid gap-2">
-              <Label>Nº Lote Cooperativa</Label>
-              <Input className="h-12 text-base" value={form.numero_lote_cooperativa} onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })} />
+              <Label className={!canFillBeneficio ? "opacity-50" : ""}>Data benefício</Label>
+              <Input type="date" disabled={!canFillBeneficio} className="h-12 text-base" value={form.data_beneficio} onChange={(e) => setForm({ ...form, data_beneficio: e.target.value })} />
+            </div>
+          </div>
+
+          <SectionHeader label="Depósito Cooperativa" locked={!canFillCooperativa} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Data envio cooperativa</Label>
+              <Input type="date" disabled={!canFillCooperativa} className="h-12 text-base" value={form.data_envio_cooperativa} onChange={(e) => setForm({ ...form, data_envio_cooperativa: e.target.value })} />
             </div>
             <div className="grid gap-2">
-              <Label>NF Remessa Cooperativa</Label>
-              <Input className="h-12 text-base" value={form.nf_remessa_cooperativa} onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })} />
+              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Nº Lote Cooperativa</Label>
+              <Input disabled={!canFillCooperativa} className="h-12 text-base" value={form.numero_lote_cooperativa} onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label className={!canFillCooperativa ? "opacity-50" : ""}>NF Remessa Cooperativa</Label>
+              <Input disabled={!canFillCooperativa} className="h-12 text-base" value={form.nf_remessa_cooperativa} onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })} />
             </div>
           </div>
 
@@ -533,11 +588,19 @@ function NovoLoteDialog({
     </Dialog>
   );
 }
+}
 
-function SectionHeader({ label }: { label: string }) {
+function SectionHeader({ label, locked }: { label: string; locked?: boolean }) {
   return (
-    <div className="mt-2 border-b pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {label}
+    <div className="mt-3 flex items-center justify-between border-b pb-1 text-xs font-semibold uppercase tracking-wide">
+      <span className={locked ? "text-muted-foreground/40" : "text-muted-foreground"}>
+        {label}
+      </span>
+      {locked && (
+        <span className="flex items-center gap-1 font-normal text-muted-foreground/60 lowercase italic text-[11px]">
+          <Lock className="h-3 w-3" /> preencha a etapa anterior
+        </span>
+      )}
     </div>
   );
 }
