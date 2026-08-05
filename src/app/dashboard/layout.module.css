@@ -1,0 +1,84 @@
+.container {
+  display: block; /* Removemos o flex, pois usaremos position fixed */
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 250px;
+  /* position: fixed tira o menu do fluxo principal. 
+     Ele não afeta o conteúdo e o conteúdo não afeta ele. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0; /* Faz o menu ir até o final da tela sempre */
+  background-color: var(--color-azul-colonial);
+  color: var(--color-creme-casarao);
+  transition: width 0.3s ease;
+  overflow-y: auto; /* Permite rolar o menu se tiver muitos itens */
+  display: flex;
+  flex-direction: column;
+  z-index: 10; /* Garante que o menu fique por cima se algo no conteúdo rolar */
+}
+
+.sidebarContent {
+  padding: 20px;
+}
+
+.sidebarMenu {
+  list-style: none;
+  margin-top: 20px;
+}
+
+.sidebarMenu li {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.menuIcon {
+  font-size: 1.2rem;
+}
+
+.mainContent {
+  /* Precisamos empurrar o conteúdo para a direita
+     para ele não ficar escondido debaixo do menu fixo */
+  padding-left: 250px; 
+  padding-top: 2rem;
+  padding-right: 2rem;
+  padding-bottom: 2rem;
+  transition: padding-left 0.3s ease;
+  min-height: 200vh; /* Apenas para testar a rolagem independente */
+}
+
+/* Quando a tela for menor que 768px, o menu lateral encolhe */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 70px;
+  }
+  
+  .mainContent {
+    /* Ajusta o padding para combinar com o novo tamanho do menu */
+    padding-left: 70px;
+  }
+  
+  .sidebarContent h2 {
+    display: none;
+  }
+  
+  .menuText {
+    display: none;
+  }
+
+  .sidebarContent {
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sidebarMenu li {
+    justify-content: center;
+  }
+}
