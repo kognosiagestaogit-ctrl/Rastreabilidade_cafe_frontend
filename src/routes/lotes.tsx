@@ -13,6 +13,11 @@ import {
   Table2,
   LayoutGrid,
   Lock,
+  Sprout,
+  Sun,
+  Flame,
+  Warehouse,
+  Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -103,6 +108,15 @@ export function hasPendingData(lote: Lote): boolean {
   const isBeneficiadoPending = lote.status === "BENEFICIADO" && !lote.data_beneficio;
   return isTerreiroPending || isSecadorPending || isTulhaPending || isBeneficiadoPending;
 }
+
+const STATUS_ICONS: Record<LoteStatus, React.ComponentType<{ className?: string }>> = {
+  EM_COLHEITA: Sprout,
+  NO_TERREIRO: Sun,
+  NO_SECADOR: Flame,
+  NA_TULHA: Warehouse,
+  BENEFICIADO: Coffee,
+  ENVIADO_COOPERATIVA: Building2,
+};
 
 function LotesPage() {
   const { fazendaAtual, fazendas } = useFazendas();
@@ -260,6 +274,7 @@ function LotesPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
               {STATUS_ORDER.map((status) => {
                 const itens = lotesFiltrados.filter((l) => l.status === status);
+                const Icon = STATUS_ICONS[status];
                 return (
                   <div
                     key={status}
@@ -268,8 +283,9 @@ function LotesPage() {
                     onDrop={(e) => handleDrop(e, status)}
                   >
                     <header className="mb-3 flex items-center justify-between px-1">
-                      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        {STATUS_LABEL[status]}
+                      <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        <Icon className="h-4 w-4 shrink-0 text-primary" />
+                        <span>{STATUS_LABEL[status]}</span>
                       </h2>
                       <span className="rounded-full bg-card px-2 py-0.5 text-xs font-medium">
                         {itens.length}
