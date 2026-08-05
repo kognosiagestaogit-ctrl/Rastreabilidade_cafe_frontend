@@ -6,7 +6,7 @@ import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { useFazendas } from "@/lib/fazenda-context";
-import { supabase } from "@/integrations/supabase/client";
+import { mockDb } from "@/lib/mock-db";
 import { brl, num, STATUS_LABEL } from "@/lib/format";
 import type { Lote, Venda } from "@/lib/db-types";
 
@@ -22,12 +22,7 @@ function Dashboard() {
     queryKey: ["lotes", fazendaAtual?.id],
     enabled: !!fazendaAtual,
     queryFn: async (): Promise<Lote[]> => {
-      const { data, error } = await supabase
-        .from("lotes")
-        .select("*")
-        .eq("fazenda_id", fazendaAtual!.id);
-      if (error) throw error;
-      return (data ?? []) as Lote[];
+      return await mockDb.getLotes(fazendaAtual!.id);
     },
   });
 
@@ -35,12 +30,7 @@ function Dashboard() {
     queryKey: ["vendas", fazendaAtual?.id],
     enabled: !!fazendaAtual,
     queryFn: async (): Promise<Venda[]> => {
-      const { data, error } = await supabase
-        .from("vendas")
-        .select("*")
-        .eq("fazenda_id", fazendaAtual!.id);
-      if (error) throw error;
-      return (data ?? []) as Venda[];
+      return await mockDb.getVendas(fazendaAtual!.id);
     },
   });
 

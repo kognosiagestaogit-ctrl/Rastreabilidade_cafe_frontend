@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useFazendas } from "@/lib/fazenda-context";
-import { supabase } from "@/integrations/supabase/client";
+import { mockDb } from "@/lib/mock-db";
 import type { Fazenda, Talhao } from "@/lib/db-types";
 import { num } from "@/lib/format";
 
@@ -46,18 +46,13 @@ function FazendasPage() {
   const createMut = useMutation({
     mutationFn: async (values: typeof form) => {
       const parsed = schema.parse(values);
-      const { data, error } = await supabase
-        .from("fazendas")
-        .insert({
-          nome: parsed.nome,
-          proprietario: parsed.proprietario || null,
-          cooperado_iniciais: parsed.cooperado_iniciais || null,
-          localizacao: parsed.localizacao || null,
-          observacoes: parsed.observacoes || null,
-        })
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await mockDb.createFazenda({
+        nome: parsed.nome,
+        proprietario: parsed.proprietario || null,
+        cooperado_iniciais: parsed.cooperado_iniciais || null,
+        localizacao: parsed.localizacao || null,
+        observacoes: parsed.observacoes || null,
+      });
       return data;
     },
     onSuccess: (data) => {
@@ -74,8 +69,7 @@ function FazendasPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("fazendas").delete().eq("id", id);
-      if (error) throw error;
+      await mockDb.deleteFazenda(id);
     },
     onSuccess: () => {
       toast.success("Fazenda removida");
@@ -222,17 +216,13 @@ function EditFazendaDialog({ fazenda, onClose }: { fazenda: Fazenda | null; onCl
     mutationFn: async () => {
       if (!fazenda) return;
       const parsed = schema.parse(form);
-      const { error } = await supabase
-        .from("fazendas")
-        .update({
-          nome: parsed.nome,
-          proprietario: parsed.proprietario || null,
-          cooperado_iniciais: parsed.cooperado_iniciais || null,
-          localizacao: parsed.localizacao || null,
-          observacoes: parsed.observacoes || null,
-        })
-        .eq("id", fazenda.id);
-      if (error) throw error;
+      await mockDb.updateFazenda(fazenda.id, {
+        nome: parsed.nome,
+        proprietario: parsed.proprietario || null,
+        cooperado_iniciais: parsed.cooperado_iniciais || null,
+        localizacao: parsed.localizacao || null,
+        observacoes: parsed.observacoes || null,
+      });
     },
     onSuccess: () => {
       toast.success("Fazenda atualizada");
@@ -292,26 +282,19 @@ function TalhoesSection({ fazendaId }: { fazendaId: string }) {
   const talhoesQ = useQuery({
     queryKey: ["talhoes", fazendaId],
     queryFn: async (): Promise<Talhao[]> => {
-      const { data, error } = await supabase
-        .from("talhoes")
-        .select("*")
-        .eq("fazenda_id", fazendaId)
-        .order("nome");
-      if (error) throw error;
-      return (data ?? []) as unknown as Talhao[];
+      return await mockDb.getTalhoes(fazendaId);
     },
   });
 
   const createMut = useMutation({
     mutationFn: async () => {
       if (!form.nome.trim()) throw new Error("Informe o nome do talhão");
-      const { error } = await supabase.from("talhoes").insert({
+      await mockDb.createTalhao({
         fazenda_id: fazendaId,
         nome: form.nome.trim(),
         variedade: form.variedade.trim() || null,
         area_hectares: form.area_hectares ? Number(form.area_hectares) : null,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Talhão adicionado");
@@ -324,8 +307,7 @@ function TalhoesSection({ fazendaId }: { fazendaId: string }) {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("talhoes").delete().eq("id", id);
-      if (error) throw error;
+      await mockDb.deleteTalhao(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["talhoes", fazendaId] }),
     onError: (e: any) => toast.error(e.message ?? "Erro"),

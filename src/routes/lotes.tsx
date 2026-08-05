@@ -29,7 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useFazendas } from "@/lib/fazenda-context";
-import { supabase } from "@/integrations/supabase/client";
+import { mockDb } from "@/lib/mock-db";
 import { STATUS_ORDER, STATUS_LABEL, dt, num, type LoteStatus } from "@/lib/format";
 import type { Lote, Talhao } from "@/lib/db-types";
 import { EditableGrid, type GridColumn, type GridGroup } from "@/components/editable-grid";
@@ -56,33 +56,46 @@ function LotesPage() {
   const [editLote, setEditLote] = useState<Lote | null>(null);
   const [busca, setBusca] = useState("");
   const [safraFiltro, setSafraFiltro] = useState<string>("TODAS");
-  const [view, setView] = useState<"planilha" | "kanban">("planilha");
 
   const lotesQ = useQuery({
     queryKey: ["lotes", fazendaAtual?.id],
     enabled: !!fazendaAtual,
     queryFn: async (): Promise<Lote[]> => {
-      const { data, error } = await supabase
-        .from("lotes")
-        .select("*")
-        .eq("fazenda_id", fazendaAtual!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Lote[];
+      return await mockDb.getLotes(fazendaAtual!.id);
     },
   });
 
   const moveMut = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: LoteStatus }) => {
-      const { error } = await supabase.from("lotes").update({ status }).eq("id", id);
-      if (error) throw error;
+      await mockDb.updateLote(id, { status });
     },
     onSuccess: () => {
-      toast.success("Lote avançado");
+      toast.success("Lote atualizado");
       qc.invalidateQueries({ queryKey: ["lotes"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, newStatus: LoteStatus) => {
+    e.preventDefault();
+    const loteId = e.dataTransfer.getData("text/plain");
+    if (!loteId) return;
+    
+    const lote = lotesQ.data?.find(l => l.id === loteId);
+    if (!lote) return;
+    if (lote.status === newStatus) return;
+
+    const currentIndex = STATUS_ORDER.indexOf(lote.status);
+    const newIndex = STATUS_ORDER.indexOf(newStatus);
+
+    if (newIndex < currentIndex) {
+      if (!window.confirm("Você está voltando este lote para uma etapa anterior. Dados das etapas seguintes poderão ser considerados inválidos ou perder o sentido. Confirma o retorno?")) {
+        return;
+      }
+    }
+
+    moveMut.mutate({ id: lote.id, status: newStatus });
+  };
 
   if (fazendas.length === 0) {
     return (
@@ -125,20 +138,6 @@ function LotesPage() {
         description="Lance os dados como numa planilha — clique na célula, digite, Tab para a próxima."
         actions={
           <div className="flex items-center gap-2">
-            <div className="flex rounded-md border bg-card p-0.5">
-              <button
-                onClick={() => setView("planilha")}
-                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium ${view === "planilha" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <Table2 className="h-4 w-4" /> Planilha
-              </button>
-              <button
-                onClick={() => setView("kanban")}
-                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium ${view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <LayoutGrid className="h-4 w-4" /> Kanban
-              </button>
-            </div>
             <NovoLoteDialog open={open} onOpenChange={setOpen} fazendaId={fazendaAtual!.id} />
           </div>
         }
@@ -180,14 +179,16 @@ function LotesPage() {
               {lotesFiltrados.length} de {lotes.length} lote(s)
             </span>
           </div>
-          {view === "planilha" ? (
-            <LotesPlanilha rows={lotesFiltrados} fazendaId={fazendaAtual!.id} />
-          ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             {STATUS_ORDER.map((status) => {
               const itens = lotesFiltrados.filter((l) => l.status === status);
               return (
-                <div key={status} className="flex flex-col rounded-xl border bg-secondary/40 p-3">
+                <div 
+                  key={status} 
+                  className="flex flex-col rounded-xl border bg-secondary/40 p-3"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, status)}
+                >
                   <header className="mb-3 flex items-center justify-between px-1">
                     <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                       {STATUS_LABEL[status]}
@@ -219,7 +220,6 @@ function LotesPage() {
               );
             })}
           </div>
-          )}
           </>
         )}
       </div>
@@ -231,16 +231,29 @@ function LotesPage() {
 }
 
 function LoteCard({ lote, onAdvance, onEdit }: { lote: Lote; onAdvance: () => void; onEdit: () => void }) {
+  const isTerreiroPending = lote.status === "NO_TERREIRO" && (!lote.data_entrada_terreiro);
+  const isSecadorPending = lote.status === "NO_SECADOR" && (!lote.data_entrada_secador || !lote.umidade);
+  const isTulhaPending = lote.status === "NA_TULHA" && (!lote.numero_tulha);
+  const hasPending = isTerreiroPending || isSecadorPending || isTulhaPending;
+
   const umidadeForaIdeal = lote.umidade != null && (Number(lote.umidade) < 10.5 || Number(lote.umidade) > 12);
   const isLast = lote.status === "ENVIADO_COOPERATIVA";
+  
   return (
-    <div className="rounded-lg border bg-card p-3 shadow-sm">
+    <div 
+      className={`rounded-lg border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing ${hasPending ? 'border-destructive/50 ring-1 ring-destructive/20' : ''}`}
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData("text/plain", lote.id)}
+    >
       <button onClick={onEdit} className="block w-full text-left">
         <div className="flex items-center justify-between gap-2">
           <span className="font-semibold text-foreground">#{lote.numero_lote_fazenda}</span>
-          {lote.lote_colheita && (
-            <span className="text-xs text-muted-foreground">{lote.lote_colheita}</span>
-          )}
+          <div className="flex items-center gap-1">
+            {hasPending && <AlertTriangle className="h-4 w-4 text-destructive" title="Faltam informações para esta etapa" />}
+            {lote.lote_colheita && (
+              <span className="text-xs text-muted-foreground">{lote.lote_colheita}</span>
+            )}
+          </div>
         </div>
         {lote.tipo_cafe && (
           <p className="mt-1 text-xs text-muted-foreground">{lote.tipo_cafe}</p>
@@ -306,13 +319,7 @@ function NovoLoteDialog({
   const talhoesQ = useQuery({
     queryKey: ["talhoes", fazendaId],
     queryFn: async (): Promise<Talhao[]> => {
-      const { data, error } = await supabase
-        .from("talhoes")
-        .select("*")
-        .eq("fazenda_id", fazendaId)
-        .order("nome");
-      if (error) throw error;
-      return (data ?? []) as unknown as Talhao[];
+      return await mockDb.getTalhoes(fazendaId);
     },
   });
   const talhoes = talhoesQ.data ?? [];
@@ -320,7 +327,7 @@ function NovoLoteDialog({
   const mut = useMutation({
     mutationFn: async () => {
       const parsed = schema.parse(form);
-      const { error } = await supabase.from("lotes").insert({
+      await mockDb.createLote({
         fazenda_id: fazendaId,
         talhao_id: form.talhao_ids[0] ?? null,
         talhao_ids: form.talhao_ids,
@@ -343,7 +350,6 @@ function NovoLoteDialog({
         numero_lote_cooperativa: form.numero_lote_cooperativa || null,
         nf_remessa_cooperativa: form.nf_remessa_cooperativa || null,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Lote registrado");
@@ -556,25 +562,21 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
 
   const mut = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("lotes")
-        .update({
-          status: form.status,
-          data_entrada_terreiro: form.data_entrada_terreiro || null,
-          data_saida_terreiro: form.data_saida_terreiro || null,
-          data_entrada_secador: form.data_entrada_secador || null,
-          data_saida_secador: form.data_saida_secador || null,
-          umidade: form.umidade ? Number(form.umidade) : null,
-          numero_tulha: form.numero_tulha || null,
-          data_beneficio: form.data_beneficio || null,
-          data_envio_cooperativa: form.data_envio_cooperativa || null,
-          numero_sacas: form.numero_sacas ? Number(form.numero_sacas) : null,
-          numero_lote_cooperativa: form.numero_lote_cooperativa || null,
-          nf_remessa_cooperativa: form.nf_remessa_cooperativa || null,
-          observacoes: form.observacoes || null,
-        })
-        .eq("id", lote.id);
-      if (error) throw error;
+      await mockDb.updateLote(lote.id, {
+        status: form.status,
+        data_entrada_terreiro: form.data_entrada_terreiro || null,
+        data_saida_terreiro: form.data_saida_terreiro || null,
+        data_entrada_secador: form.data_entrada_secador || null,
+        data_saida_secador: form.data_saida_secador || null,
+        umidade: form.umidade ? Number(form.umidade) : null,
+        numero_tulha: form.numero_tulha || null,
+        data_beneficio: form.data_beneficio || null,
+        data_envio_cooperativa: form.data_envio_cooperativa || null,
+        numero_sacas: form.numero_sacas ? Number(form.numero_sacas) : null,
+        numero_lote_cooperativa: form.numero_lote_cooperativa || null,
+        nf_remessa_cooperativa: form.nf_remessa_cooperativa || null,
+        observacoes: form.observacoes || null,
+      });
     },
     onSuccess: () => {
       toast.success("Lote atualizado");
@@ -586,8 +588,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
 
   const delMut = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("lotes").delete().eq("id", lote.id);
-      if (error) throw error;
+      await mockDb.deleteLote(lote.id);
     },
     onSuccess: () => {
       toast.success("Lote excluído");
@@ -596,6 +597,11 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     },
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
+
+  const statusIdx = STATUS_ORDER.indexOf(form.status);
+  const showTerreiro = statusIdx >= STATUS_ORDER.indexOf("NO_TERREIRO");
+  const showSecador = statusIdx >= STATUS_ORDER.indexOf("NO_SECADOR");
+  const showBeneficio = statusIdx >= STATUS_ORDER.indexOf("NA_TULHA");
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -617,40 +623,46 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
             </Select>
           </div>
 
-          <Fieldset legend="Terreiro">
-            <DateField label="Entrada" value={form.data_entrada_terreiro} onChange={(v) => setForm({ ...form, data_entrada_terreiro: v })} />
-            <DateField label="Saída" value={form.data_saida_terreiro} onChange={(v) => setForm({ ...form, data_saida_terreiro: v })} />
-          </Fieldset>
+          {showTerreiro && (
+            <Fieldset legend="Terreiro">
+              <DateField label="Entrada" value={form.data_entrada_terreiro} onChange={(v) => setForm({ ...form, data_entrada_terreiro: v })} />
+              <DateField label="Saída" value={form.data_saida_terreiro} onChange={(v) => setForm({ ...form, data_saida_terreiro: v })} />
+            </Fieldset>
+          )}
 
-          <Fieldset legend="Secador">
-            <DateField label="Entrada" value={form.data_entrada_secador} onChange={(v) => setForm({ ...form, data_entrada_secador: v })} />
-            <DateField label="Saída" value={form.data_saida_secador} onChange={(v) => setForm({ ...form, data_saida_secador: v })} />
-            <div className="grid gap-2">
-              <Label>Umidade (%)</Label>
-              <Input type="number" step="0.1" className="h-12 text-base" value={form.umidade} onChange={(e) => setForm({ ...form, umidade: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Tulha</Label>
-              <Input className="h-12 text-base" value={form.numero_tulha} onChange={(e) => setForm({ ...form, numero_tulha: e.target.value })} />
-            </div>
-          </Fieldset>
+          {showSecador && (
+            <Fieldset legend="Secador">
+              <DateField label="Entrada" value={form.data_entrada_secador} onChange={(v) => setForm({ ...form, data_entrada_secador: v })} />
+              <DateField label="Saída" value={form.data_saida_secador} onChange={(v) => setForm({ ...form, data_saida_secador: v })} />
+              <div className="grid gap-2">
+                <Label>Umidade (%)</Label>
+                <Input type="number" step="0.1" className="h-12 text-base" value={form.umidade} onChange={(e) => setForm({ ...form, umidade: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Tulha</Label>
+                <Input className="h-12 text-base" value={form.numero_tulha} onChange={(e) => setForm({ ...form, numero_tulha: e.target.value })} />
+              </div>
+            </Fieldset>
+          )}
 
-          <Fieldset legend="Benefício & Cooperativa">
-            <DateField label="Data de benefício" value={form.data_beneficio} onChange={(v) => setForm({ ...form, data_beneficio: v })} />
-            <DateField label="Envio à cooperativa" value={form.data_envio_cooperativa} onChange={(v) => setForm({ ...form, data_envio_cooperativa: v })} />
-            <div className="grid gap-2">
-              <Label>Nº sacas do lote</Label>
-              <Input type="number" step="0.1" className="h-12 text-base" value={form.numero_sacas} onChange={(e) => setForm({ ...form, numero_sacas: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Nº lote cooperativa</Label>
-              <Input className="h-12 text-base" value={form.numero_lote_cooperativa} onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })} />
-            </div>
-            <div className="grid gap-2 sm:col-span-2">
-              <Label>NF remessa cooperativa</Label>
-              <Input className="h-12 text-base" value={form.nf_remessa_cooperativa} onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })} />
-            </div>
-          </Fieldset>
+          {showBeneficio && (
+            <Fieldset legend="Benefício & Cooperativa">
+              <DateField label="Data de benefício" value={form.data_beneficio} onChange={(v) => setForm({ ...form, data_beneficio: v })} />
+              <DateField label="Envio à cooperativa" value={form.data_envio_cooperativa} onChange={(v) => setForm({ ...form, data_envio_cooperativa: v })} />
+              <div className="grid gap-2">
+                <Label>Nº sacas do lote</Label>
+                <Input type="number" step="0.1" className="h-12 text-base" value={form.numero_sacas} onChange={(e) => setForm({ ...form, numero_sacas: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Nº lote cooperativa</Label>
+                <Input className="h-12 text-base" value={form.numero_lote_cooperativa} onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })} />
+              </div>
+              <div className="grid gap-2 sm:col-span-2">
+                <Label>NF remessa cooperativa</Label>
+                <Input className="h-12 text-base" value={form.nf_remessa_cooperativa} onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })} />
+              </div>
+            </Fieldset>
+          )}
 
           <div className="grid gap-2">
             <Label>Observações</Label>
@@ -693,154 +705,5 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
       <Label>{label}</Label>
       <Input type="date" className="h-12 text-base" value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
-  );
-}
-
-function LotesPlanilha({ rows, fazendaId }: { rows: Lote[]; fazendaId: string }) {
-  const qc = useQueryClient();
-
-  const talhoesQ = useQuery({
-    queryKey: ["talhoes", fazendaId],
-    queryFn: async (): Promise<Talhao[]> => {
-      const { data, error } = await supabase
-        .from("talhoes")
-        .select("*")
-        .eq("fazenda_id", fazendaId)
-        .order("nome");
-      if (error) throw error;
-      return (data ?? []) as unknown as Talhao[];
-    },
-  });
-  const talhoes = talhoesQ.data ?? [];
-
-  const tipoCafeOptions = [
-    { value: "NATURAL", label: "Natural" },
-    { value: "VARREÇÃO", label: "Varreção" },
-    { value: "CEREJA DESCASCADO", label: "Cereja descascado" },
-  ];
-  const colheitaOptions = [
-    { value: "MANUAL", label: "Manual" },
-    { value: "MECANICA", label: "Mecânica" },
-  ];
-  const statusOptions = STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABEL[s] }));
-  const talhaoOptions = talhoes.map((t) => ({ value: t.id, label: t.nome }));
-
-  function deriveStatus(l: Partial<Lote>): LoteStatus {
-    if (l.data_envio_cooperativa) return "ENVIADO_COOPERATIVA";
-    if (l.data_beneficio) return "BENEFICIADO";
-    if (l.numero_tulha || l.data_saida_secador) return "NA_TULHA";
-    if (l.data_entrada_secador) return "NO_SECADOR";
-    if (l.data_entrada_terreiro) return "NO_TERREIRO";
-    return "EM_COLHEITA";
-  }
-
-  const columns: GridColumn<Lote>[] = [
-    // COLHEITA (6) — ordem da planilha original
-    { key: "numero_lote_fazenda", label: "Nº Lote Fazenda (lotão)", type: "text", required: true, width: 140, accessor: (r) => r.numero_lote_fazenda, placeholder: "Nº" },
-    { key: "talhao_ids", label: "Talhão(ões)", type: "multiselect", options: talhaoOptions, width: 200, accessor: (r) => r.talhao_ids ?? [] },
-    { key: "lote_colheita", label: "Compõe lote colheita (lotinho)", type: "text", width: 180, accessor: (r) => r.lote_colheita ?? "" },
-    { key: "data_colheita_inicio", label: "Data início", type: "date", width: 150, accessor: (r) => r.data_colheita_inicio ?? "" },
-    { key: "data_colheita_fim", label: "Data fim", type: "date", width: 150, accessor: (r) => r.data_colheita_fim ?? "" },
-    { key: "colheita_tipo", label: "Man/Mec", type: "select", options: colheitaOptions, width: 110, accessor: (r) => r.colheita_tipo ?? "" },
-    { key: "tipo_cafe", label: "Tipo de café", type: "select", options: tipoCafeOptions, width: 180, accessor: (r) => r.tipo_cafe ?? "" },
-
-    // TERREIRO (2)
-    { key: "data_entrada_terreiro", label: "Data entrada", type: "date", width: 150, accessor: (r) => r.data_entrada_terreiro ?? "" },
-    { key: "data_saida_terreiro", label: "Data saída", type: "date", width: 150, accessor: (r) => r.data_saida_terreiro ?? "" },
-
-    // SECADOR (3)
-    { key: "data_entrada_secador", label: "Data entrada", type: "date", width: 150, accessor: (r) => r.data_entrada_secador ?? "" },
-    { key: "data_saida_secador", label: "Data saída", type: "date", width: 150, accessor: (r) => r.data_saida_secador ?? "" },
-    {
-      key: "umidade",
-      label: "Umidade %",
-      type: "number",
-      width: 110,
-      accessor: (r) => r.umidade,
-      warn: (r) => r.umidade != null && (Number(r.umidade) < 10.5 || Number(r.umidade) > 12),
-    },
-
-    // BENEFÍCIO (2)
-    { key: "numero_tulha", label: "Nº tulha", type: "text", width: 100, accessor: (r) => r.numero_tulha ?? "" },
-    { key: "data_beneficio", label: "Data benefício", type: "date", width: 150, accessor: (r) => r.data_beneficio ?? "" },
-
-    // DEPÓSITO / COOPERATIVA (4)
-    { key: "data_envio_cooperativa", label: "Data envio cooperativa", type: "date", width: 170, accessor: (r) => r.data_envio_cooperativa ?? "" },
-    { key: "numero_sacas", label: "Nº sacas do lote", type: "number", width: 140, accessor: (r) => r.numero_sacas },
-    { key: "numero_lote_cooperativa", label: "Nº lote cooperativa", type: "text", width: 160, accessor: (r) => r.numero_lote_cooperativa ?? "" },
-    { key: "nf_remessa_cooperativa", label: "NF remessa cooperativa", type: "text", width: 180, accessor: (r) => r.nf_remessa_cooperativa ?? "" },
-
-    // OBSERVAÇÕES / STATUS (2)
-    { key: "observacoes", label: "Observações", type: "text", width: 240, accessor: (r) => r.observacoes ?? "" },
-    { key: "status", label: "Etapa (auto)", type: "select", options: statusOptions, width: 160, accessor: (r) => r.status },
-  ];
-
-  const groups: GridGroup[] = [
-    { label: "Colheita", span: 7, className: "bg-amber-50 dark:bg-amber-950/30" },
-    { label: "Terreiro", span: 2, className: "bg-orange-50 dark:bg-orange-950/30" },
-    { label: "Secador", span: 3, className: "bg-sky-50 dark:bg-sky-950/30" },
-    { label: "Benefício", span: 2, className: "bg-emerald-50 dark:bg-emerald-950/30" },
-    { label: "Depósito", span: 4, className: "bg-stone-100 dark:bg-stone-900/40" },
-    { label: "Observações", span: 2, className: "bg-secondary/60" },
-  ];
-
-  async function saveCell(rowId: string, key: string, value: string | number | string[] | null) {
-    const patch: Record<string, unknown> = { [key]: value };
-    if (key === "talhao_ids") {
-      const arr = Array.isArray(value) ? value : [];
-      patch.talhao_id = arr[0] ?? null;
-    }
-    // Auto-derive status when stage dates change
-    if (["data_entrada_terreiro", "data_saida_terreiro", "data_entrada_secador", "data_saida_secador", "numero_tulha", "data_beneficio", "data_envio_cooperativa"].includes(key)) {
-      const current = rows.find((r) => r.id === rowId);
-      if (current) {
-        const next = deriveStatus({ ...current, [key]: value });
-        patch.status = next;
-      }
-    }
-    const { error } = await supabase.from("lotes").update(patch as never).eq("id", rowId);
-    if (error) throw error;
-    qc.invalidateQueries({ queryKey: ["lotes"] });
-  }
-
-  async function createRow(initial: Record<string, string | number | string[] | null>): Promise<string> {
-    const payload: Record<string, unknown> = { fazenda_id: fazendaId, ...initial };
-    payload.status = deriveStatus(initial as Partial<Lote>);
-    const { data, error } = await supabase.from("lotes").insert(payload as never).select("id").single();
-    if (error) throw error;
-    qc.invalidateQueries({ queryKey: ["lotes"] });
-    toast.success("Lote criado");
-    return data!.id as string;
-  }
-
-  async function duplicateRow(rowId: string) {
-    const src = rows.find((r) => r.id === rowId);
-    if (!src) return;
-    const { id: _id, ...rest } = src as any;
-    const { error } = await supabase.from("lotes").insert({ ...rest, numero_lote_fazenda: `${src.numero_lote_fazenda} (cópia)` });
-    if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["lotes"] });
-    toast.success("Lote duplicado");
-  }
-
-  async function deleteRow(rowId: string) {
-    const { error } = await supabase.from("lotes").delete().eq("id", rowId);
-    if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["lotes"] });
-    toast.success("Lote excluído");
-  }
-
-  return (
-    <EditableGrid<Lote>
-      rows={rows}
-      columns={columns}
-      groups={groups}
-      onSaveCell={saveCell}
-      onCreateRow={createRow}
-      onDuplicateRow={duplicateRow}
-      onDeleteRow={deleteRow}
-      newRowDraftKeys={["numero_lote_fazenda"]}
-      emptyDraftLabel="Digite o nº do lote para criar"
-    />
   );
 }

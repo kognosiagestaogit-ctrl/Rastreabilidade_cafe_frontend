@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -14,8 +13,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { FazendaSwitcher } from "./fazenda-switcher";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 const items = [
   { title: "Painel", url: "/", icon: LayoutDashboard },
@@ -27,22 +24,6 @@ const items = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
-  const [email, setEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setEmail(data.session?.user.email ?? null);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setEmail(session?.user.email ?? null);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    toast.success("Você saiu da sua conta");
-  }
 
   return (
     <Sidebar collapsible="icon">
@@ -90,30 +71,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border">
-        <SidebarMenu>
-          {email ? (
-            <>
-              <SidebarMenuItem>
-                <div className="px-2 py-1 text-xs text-sidebar-foreground/70 truncate">{email}</div>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4" />
-                  <span>Sair</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </>
-          ) : (
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => navigate({ to: "/auth" })}>
-                <LogIn className="h-4 w-4" />
-                <span>Entrar</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }

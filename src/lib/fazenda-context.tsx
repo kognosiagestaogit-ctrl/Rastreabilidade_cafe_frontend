@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { mockDb } from "./mock-db";
 import type { Fazenda } from "./db-types";
 
 const STORAGE_KEY = "fazenda_atual_id";
@@ -20,12 +20,7 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
   const { data, isLoading } = useQuery({
     queryKey: ["fazendas"],
     queryFn: async (): Promise<Fazenda[]> => {
-      const { data, error } = await supabase
-        .from("fazendas")
-        .select("id,nome,proprietario,cooperado_iniciais,localizacao,observacoes")
-        .order("nome");
-      if (error) throw error;
-      return (data ?? []) as Fazenda[];
+      return await mockDb.getFazendas();
     },
   });
 

@@ -29,7 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useFazendas } from "@/lib/fazenda-context";
-import { supabase } from "@/integrations/supabase/client";
+import { mockDb } from "@/lib/mock-db";
 import { brl, dt, num } from "@/lib/format";
 import type { Venda } from "@/lib/db-types";
 import { EditableGrid, type GridColumn, type GridGroup } from "@/components/editable-grid";
@@ -95,13 +95,7 @@ function VendasPage() {
     queryKey: ["vendas", fazendaAtual?.id],
     enabled: !!fazendaAtual,
     queryFn: async (): Promise<Venda[]> => {
-      const { data, error } = await supabase
-        .from("vendas")
-        .select("*")
-        .eq("fazenda_id", fazendaAtual!.id)
-        .order("data_venda", { ascending: false, nullsFirst: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as Venda[];
+      return await mockDb.getVendas(fazendaAtual!.id);
     },
   });
 
@@ -362,11 +356,10 @@ function VendasPlanilha({ rows, fazendaId }: { rows: Venda[]; fazendaId: string 
     return patch;
   }
 
-  async function saveCell(rowId: string, key: string, value: string | number | string[] | null) {
+  async function saveCell(rowId: string, col: string, newVal: any) {
     const current = rows.find((r) => r.id === rowId) ?? {};
-    const patch = applyDerived(current, key, value as string | number | null);
-    const { error } = await supabase.from("vendas").update(patch as never).eq("id", rowId);
-    if (error) throw error;
+    const patch = applyDerived(current, col, newVal);
+    await mockDb.updateVenda(rowId, patch);
     qc.invalidateQueries({ queryKey: ["vendas"] });
   }
 
@@ -385,26 +378,23 @@ function VendasPlanilha({ rows, fazendaId }: { rows: Venda[]; fazendaId: string 
       const p = Number(payload.premio_rainforest);
       payload.premio_liquido_funrural = +(p * (1 - FUNRURAL)).toFixed(2);
     }
-    const { data, error } = await supabase.from("vendas").insert(payload as never).select("id").single();
-    if (error) throw error;
+    const id = await mockDb.createVenda(payload);
     qc.invalidateQueries({ queryKey: ["vendas"] });
     toast.success("Venda criada");
-    return data!.id as string;
+    return id;
   }
 
   async function duplicateRow(rowId: string) {
     const src = rows.find((r) => r.id === rowId);
     if (!src) return;
     const { id: _id, ...rest } = src as any;
-    const { error } = await supabase.from("vendas").insert({ ...rest });
-    if (error) { toast.error(error.message); return; }
+    await mockDb.createVenda(rest);
     qc.invalidateQueries({ queryKey: ["vendas"] });
     toast.success("Venda duplicada");
   }
 
   async function deleteRow(rowId: string) {
-    const { error } = await supabase.from("vendas").delete().eq("id", rowId);
-    if (error) { toast.error(error.message); return; }
+    await mockDb.deleteVenda(rowId);
     qc.invalidateQueries({ queryKey: ["vendas"] });
     toast.success("Venda excluída");
   }
@@ -487,7 +477,7 @@ function NovaVendaDialog({
           ? Number(parsed.vl_liquido)
           : liquidoAuto;
       const premioLiq = premioLiquidoAuto;
-      const { error } = await supabase.from("vendas").insert({
+      await mockDb.createVenda({
         fazenda_id: fazendaId,
         cliente: parsed.cliente,
         numero_lote_cooperativa: parsed.numero_lote_cooperativa || null,
@@ -518,8 +508,7 @@ function NovaVendaDialog({
         conta_corrente: parsed.conta_corrente || null,
         is_ds: parsed.is_ds ? Number(parsed.is_ds) : null,
         data_recebimento_premio: parsed.data_recebimento_premio || null,
-      } as never);
-      if (error) throw error;
+      });
     },
     onSuccess: () => {
       toast.success("Venda registrada");
@@ -751,12 +740,10 @@ function RelatorioVendasDialog({
     }
     setGerando(true);
     try {
-      let q = supabase.from("vendas").select("*").eq("fazenda_id", fazendaId).order("data_venda", { ascending: true, nullsFirst: false });
-      if (inicio) q = q.gte("data_venda", inicio);
-      if (fim) q = q.lte("data_venda", fim);
-      const { data, error } = await q;
-      if (error) throw error;
-      const rows = (data ?? []) as unknown as Venda[];
+      let rows = await mockDb.getVendas(fazendaId);
+      
+      if (inicio) rows = rows.filter(r => (r.data_venda || "") >= inicio);
+      if (fim) rows = rows.filter(r => (r.data_venda || "") <= fim);
       if (rows.length === 0) {
         toast.info("Nenhuma venda encontrada no período");
         setGerando(false);
