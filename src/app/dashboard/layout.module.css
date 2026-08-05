@@ -5,40 +5,74 @@
 
 .sidebar {
   width: 250px;
-  /* position: fixed tira o menu do fluxo principal. 
-     Ele não afeta o conteúdo e o conteúdo não afeta ele. */
   position: fixed;
   top: 0;
   left: 0;
-  bottom: 0; /* Faz o menu ir até o final da tela sempre */
-  background-color: var(--color-azul-colonial);
+  bottom: 0;
+  background: linear-gradient(180deg, var(--color-azul-colonial) 0%, #112338 100%);
   color: var(--color-creme-casarao);
-  transition: width 0.3s ease;
-  overflow-y: auto; /* Permite rolar o menu se tiver muitos itens */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  z-index: 10; /* Garante que o menu fique por cima se algo no conteúdo rolar */
+  z-index: 10;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebarContent {
-  padding: 20px;
+  padding: 24px;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logoText {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.logoIcon {
+  color: var(--color-ouro-envelhecido);
 }
 
 .sidebarMenu {
   list-style: none;
-  margin-top: 20px;
 }
 
 .sidebarMenu li {
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+}
+
+.menuLink {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.menuLink:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: translateX(4px);
 }
 
 .menuIcon {
-  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
 .mainContent {
@@ -63,7 +97,7 @@
     padding-left: 70px;
   }
   
-  .sidebarContent h2 {
+  .logoText {
     display: none;
   }
   
@@ -72,13 +106,20 @@
   }
 
   .sidebarContent {
-    padding: 20px 10px;
+    padding: 24px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  .sidebarMenu li {
+  .logoContainer {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
     justify-content: center;
+  }
+
+  .menuLink {
+    justify-content: center;
+    padding: 10px 0;
   }
 }
