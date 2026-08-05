@@ -143,11 +143,19 @@ function LotesPage() {
     const currentIndex = STATUS_ORDER.indexOf(lote.status);
     const newIndex = STATUS_ORDER.indexOf(newStatus);
 
-    if (newIndex > currentIndex && hasPendingData(lote)) {
-      toast.error(
-        "Este lote possui informações pendentes na etapa atual (em vermelho). Clique no lote e preencha as informações antes de avançar.",
-      );
-      return;
+    if (newIndex > currentIndex) {
+      if (newIndex > currentIndex + 1) {
+        toast.error(
+          "O lote só pode ser avançado para a etapa imediatamente seguinte (uma de cada vez).",
+        );
+        return;
+      }
+      if (hasPendingData(lote)) {
+        toast.error(
+          "Este lote possui informações pendentes na etapa atual (em vermelho). Clique no lote e preencha as informações antes de avançar.",
+        );
+        return;
+      }
     }
 
     if (newIndex < currentIndex) {
@@ -839,6 +847,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
 
+  const originalIndex = STATUS_ORDER.indexOf(lote.status);
   const statusIdx = STATUS_ORDER.indexOf(form.status);
   const showTerreiro = statusIdx >= STATUS_ORDER.indexOf("NO_TERREIRO");
   const showSecador = statusIdx >= STATUS_ORDER.indexOf("NO_SECADOR");
@@ -862,11 +871,14 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_ORDER.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </SelectItem>
-                ))}
+                {STATUS_ORDER.map((s, idx) => {
+                  const isSkipping = idx > originalIndex + 1;
+                  return (
+                    <SelectItem key={s} value={s} disabled={isSkipping}>
+                      {STATUS_LABEL[s]} {isSkipping ? "(Etapa bloqueada)" : ""}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
