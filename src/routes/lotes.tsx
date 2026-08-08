@@ -18,6 +18,8 @@ import {
   Flame,
   Warehouse,
   Building2,
+  Filter,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -123,8 +125,25 @@ function LotesPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editLote, setEditLote] = useState<Lote | null>(null);
-  const [busca, setBusca] = useState("");
-  const [safraFiltro, setSafraFiltro] = useState<string>("TODAS");
+  const [buscaDraft, setBuscaDraft] = useState("");
+  const [safraDraft, setSafraDraft] = useState<string>("TODAS");
+
+  const [buscaApplied, setBuscaApplied] = useState("");
+  const [safraApplied, setSafraApplied] = useState<string>("TODAS");
+
+  const handleApplyFilters = () => {
+    setBuscaApplied(buscaDraft);
+    setSafraApplied(safraDraft);
+    toast.success("Filtros aplicados");
+  };
+
+  const handleClearFilters = () => {
+    setBuscaDraft("");
+    setSafraDraft("TODAS");
+    setBuscaApplied("");
+    setSafraApplied("TODAS");
+    toast.info("Filtros limpos");
+  };
 
   const lotesQ = useQuery({
     queryKey: ["lotes", fazendaAtual?.id],
@@ -204,9 +223,9 @@ function LotesPage() {
   );
 
   const lotesFiltrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
+    const termo = buscaApplied.trim().toLowerCase();
     return lotes.filter((l) => {
-      if (safraFiltro !== "TODAS" && String(l.safra) !== safraFiltro) return false;
+      if (safraApplied !== "TODAS" && String(l.safra) !== safraApplied) return false;
       if (!termo) return true;
       const campos = [
         l.numero_lote_fazenda,
@@ -217,7 +236,7 @@ function LotesPage() {
       ];
       return campos.some((c) => (c ?? "").toLowerCase().includes(termo));
     });
-  }, [lotes, busca, safraFiltro]);
+  }, [lotes, buscaApplied, safraApplied]);
 
   return (
     <>
@@ -249,12 +268,15 @@ function LotesPage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por lote, tipo, tulha..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
+                  value={buscaDraft}
+                  onChange={(e) => setBuscaDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleApplyFilters();
+                  }}
                   className="h-11 pl-9"
                 />
               </div>
-              <Select value={safraFiltro} onValueChange={setSafraFiltro}>
+              <Select value={safraDraft} onValueChange={setSafraDraft}>
                 <SelectTrigger className="h-11 w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -267,7 +289,13 @@ function LotesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground">
+              <Button onClick={handleApplyFilters} className="h-11 gap-2">
+                <Filter className="h-4 w-4" /> Aplicar filtros
+              </Button>
+              <Button variant="outline" onClick={handleClearFilters} className="h-11 gap-2">
+                <RotateCcw className="h-4 w-4" /> Limpar filtros
+              </Button>
+              <span className="ml-auto text-sm text-muted-foreground">
                 {lotesFiltrados.length} de {lotes.length} lote(s)
               </span>
             </div>

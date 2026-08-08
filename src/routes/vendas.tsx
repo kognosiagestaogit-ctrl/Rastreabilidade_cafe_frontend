@@ -20,6 +20,8 @@ import {
   Lock,
   Trash2,
   Calendar,
+  Filter,
+  RotateCcw,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -173,13 +175,29 @@ function VendasPage() {
   const qc = useQueryClient();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const [busca, setBusca] = useState("");
+  const [buscaDraft, setBuscaDraft] = useState("");
+  const [visaoDraft, setVisaoDraft] = useState<Visao>("todas");
+
+  const [buscaApplied, setBuscaApplied] = useState("");
+  const [visaoApplied, setVisaoApplied] = useState<Visao>("todas");
+
   const [novaOpen, setNovaOpen] = useState(false);
   const [editVenda, setEditVenda] = useState<Venda | null>(null);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
 
-  const visao: Visao = search.visao;
-  const setVisao = (v: Visao) => navigate({ search: { visao: v }, replace: true });
+  const handleApplyFilters = () => {
+    setBuscaApplied(buscaDraft);
+    setVisaoApplied(visaoDraft);
+    toast.success("Filtros aplicados");
+  };
+
+  const handleClearFilters = () => {
+    setBuscaDraft("");
+    setVisaoDraft("todas");
+    setBuscaApplied("");
+    setVisaoApplied("todas");
+    toast.info("Filtros limpos");
+  };
 
   const vendasQ = useQuery({
     queryKey: ["vendas", fazendaAtual?.id],
@@ -246,19 +264,19 @@ function VendasPage() {
 
   const vendasVisao = useMemo(() => {
     return vendas.filter((v) => {
-      if (visao === "receber") {
+      if (visaoApplied === "receber") {
         const saldo =
           Number(v.vl_liquido ?? v.a_receber_previsto ?? 0) - Number(v.valor_recebido ?? 0);
         if (saldo <= 0.01) return false;
       }
-      if (visao === "rainforest" && !(Number(v.premio_rainforest ?? 0) > 0)) return false;
-      const termo = busca.trim().toLowerCase();
+      if (visaoApplied === "rainforest" && !(Number(v.premio_rainforest ?? 0) > 0)) return false;
+      const termo = buscaApplied.trim().toLowerCase();
       if (!termo) return true;
       return [v.cliente, v.numero_lote_cooperativa, v.nf_venda, v.padrao].some((c) =>
         (c ?? "").toLowerCase().includes(termo),
       );
     });
-  }, [vendas, visao, busca]);
+  }, [vendas, visaoApplied, buscaApplied]);
 
   const totais = useMemo(() => {
     let bruto = 0,
@@ -330,34 +348,45 @@ function VendasPage() {
         fazendaNome={fazendaAtual?.nome ?? ""}
       />
       <div className="p-4 sm:p-8">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <VisaoBtn
-            active={visao === "todas"}
-            onClick={() => setVisao("todas")}
-            icon={List}
-            label="Todas"
-          />
-          <VisaoBtn
-            active={visao === "receber"}
-            onClick={() => setVisao("receber")}
-            icon={Wallet}
-            label="A receber"
-          />
-          <VisaoBtn
-            active={visao === "rainforest"}
-            onClick={() => setVisao("rainforest")}
-            icon={Award}
-            label="Rainforest"
-          />
-          <div className="relative ml-auto min-w-[240px]">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3">
+          <div className="flex items-center gap-2">
+            <VisaoBtn
+              active={visaoDraft === "todas"}
+              onClick={() => setVisaoDraft("todas")}
+              icon={List}
+              label="Todas"
+            />
+            <VisaoBtn
+              active={visaoDraft === "receber"}
+              onClick={() => setVisaoDraft("receber")}
+              icon={Wallet}
+              label="A receber"
+            />
+            <VisaoBtn
+              active={visaoDraft === "rainforest"}
+              onClick={() => setVisaoDraft("rainforest")}
+              icon={Award}
+              label="Rainforest"
+            />
+          </div>
+          <div className="relative min-w-[220px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar cliente, lote, NF..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
+              value={buscaDraft}
+              onChange={(e) => setBuscaDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleApplyFilters();
+              }}
               className="h-10 pl-9"
             />
           </div>
+          <Button onClick={handleApplyFilters} className="h-10 gap-2">
+            <Filter className="h-4 w-4" /> Aplicar filtros
+          </Button>
+          <Button variant="outline" onClick={handleClearFilters} className="h-10 gap-2">
+            <RotateCcw className="h-4 w-4" /> Limpar filtros
+          </Button>
         </div>
 
         <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
