@@ -389,7 +389,7 @@ function VendasPage() {
           </Button>
         </div>
 
-        <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <StatCard icon={Package} label="Sacas" value={num(totais.sacas, 1)} />
           <StatCard icon={DollarSign} label="Bruto" value={brl(totais.bruto)} />
           <StatCard icon={TrendingUp} label="Líquido" value={brl(totais.liquido)} />
