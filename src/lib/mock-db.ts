@@ -9,6 +9,7 @@ let fazendas: Fazenda[] = [
     cooperado_iniciais: "FPN",
     localizacao: "Minas Gerais",
     observacoes: "Fazenda pré-cadastrada para visualização do sistema.",
+    cor: "emerald",
   },
 ];
 

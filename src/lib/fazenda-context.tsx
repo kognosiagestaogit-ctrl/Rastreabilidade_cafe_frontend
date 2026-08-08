@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useQuery } from "@tanstack/react-query";
 import { mockDb } from "./mock-db";
 import type { Fazenda } from "./db-types";
+import { applyFazendaPalette } from "./theme-palettes";
 
 const STORAGE_KEY = "fazenda_atual_id";
 
@@ -40,6 +41,10 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
   };
 
   const fazendaAtual = fazendas.find((f) => f.id === fazendaAtualId) ?? null;
+
+  useEffect(() => {
+    applyFazendaPalette(fazendaAtual?.cor);
+  }, [fazendaAtual?.cor, fazendaAtual?.id]);
 
   return (
     <FazendaContext.Provider value={{ fazendas, isLoading, fazendaAtual, setFazendaAtualId }}>

@@ -1,7 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Tractor, MapPin, User, Trash2, Sprout, X, Pencil } from "lucide-react";
+import {
+  Plus,
+  Tractor,
+  MapPin,
+  User,
+  Trash2,
+  Sprout,
+  X,
+  Pencil,
+  Palette,
+  Check,
+} from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
@@ -23,6 +34,8 @@ import { useFazendas } from "@/lib/fazenda-context";
 import { mockDb } from "@/lib/mock-db";
 import type { Fazenda, Talhao } from "@/lib/db-types";
 import { num } from "@/lib/format";
+import { FAZENDA_PALETTES, type ThemePaletteKey } from "@/lib/theme-palettes";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/fazendas")({
   head: () => ({ meta: [{ title: "Fazendas — Gestão Pedra Negra" }] }),
@@ -35,13 +48,66 @@ const schema = z.object({
   cooperado_iniciais: z.string().trim().max(20).optional().or(z.literal("")),
   localizacao: z.string().trim().max(200).optional().or(z.literal("")),
   observacoes: z.string().trim().max(1000).optional().or(z.literal("")),
+  cor: z.string().optional().or(z.literal("")),
 });
+
+function PaletteSelector({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (key: ThemePaletteKey) => void;
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label className="flex items-center gap-1.5 font-medium">
+        <Palette className="h-4 w-4 text-muted-foreground" /> Paleta de cores do tema
+      </Label>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {Object.values(FAZENDA_PALETTES).map((pal) => {
+          const isSelected = value === pal.key;
+          return (
+            <button
+              key={pal.key}
+              type="button"
+              onClick={() => onChange(pal.key)}
+              className={cn(
+                "flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition hover:bg-accent/50",
+                isSelected
+                  ? "border-primary ring-2 ring-primary/20 bg-accent/40 font-medium"
+                  : "border-border",
+              )}
+            >
+              <span
+                className="h-5 w-5 shrink-0 rounded-full border border-black/10 shadow-xs flex items-center justify-center text-white"
+                style={{ backgroundColor: pal.badgeHex }}
+              >
+                {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold leading-none">{pal.nome}</p>
+                <p className="truncate text-[10px] text-muted-foreground mt-0.5">{pal.descricao}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function FazendasPage() {
   const { fazendas, setFazendaAtualId, fazendaAtual } = useFazendas();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nome: "", proprietario: "", cooperado_iniciais: "", localizacao: "", observacoes: "" });
+  const [form, setForm] = useState({
+    nome: "",
+    proprietario: "",
+    cooperado_iniciais: "",
+    localizacao: "",
+    observacoes: "",
+    cor: "emerald",
+  });
 
   const createMut = useMutation({
     mutationFn: async (values: typeof form) => {
@@ -52,6 +118,7 @@ function FazendasPage() {
         cooperado_iniciais: parsed.cooperado_iniciais || null,
         localizacao: parsed.localizacao || null,
         observacoes: parsed.observacoes || null,
+        cor: parsed.cor || "emerald",
       });
       return data;
     },
@@ -60,7 +127,14 @@ function FazendasPage() {
       qc.invalidateQueries({ queryKey: ["fazendas"] });
       if (data?.id) setFazendaAtualId(data.id);
       setOpen(false);
-      setForm({ nome: "", proprietario: "", cooperado_iniciais: "", localizacao: "", observacoes: "" });
+      setForm({
+        nome: "",
+        proprietario: "",
+        cooperado_iniciais: "",
+        localizacao: "",
+        observacoes: "",
+        cor: "emerald",
+      });
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao cadastrar"),
   });
@@ -88,34 +162,67 @@ function FazendasPage() {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Cadastrar fazenda</DialogTitle>
-          <DialogDescription>Preencha os dados básicos. Você pode editar depois.</DialogDescription>
+          <DialogDescription>
+            Preencha os dados básicos e escolha a cor tema da fazenda.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label htmlFor="nome">Nome da fazenda *</Label>
-            <Input id="nome" className="h-12 text-base" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex.: Fazenda Boa Vista" />
+            <Input
+              id="nome"
+              className="h-12 text-base"
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              placeholder="Ex.: Fazenda Boa Vista"
+            />
           </div>
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             <div className="grid gap-2">
               <Label htmlFor="prop">Proprietário</Label>
-              <Input id="prop" className="h-12 text-base" value={form.proprietario} onChange={(e) => setForm({ ...form, proprietario: e.target.value })} />
+              <Input
+                id="prop"
+                className="h-12 text-base"
+                value={form.proprietario}
+                onChange={(e) => setForm({ ...form, proprietario: e.target.value })}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="iniciais">Iniciais (cooperado)</Label>
-              <Input id="iniciais" className="h-12 text-base" value={form.cooperado_iniciais} onChange={(e) => setForm({ ...form, cooperado_iniciais: e.target.value })} placeholder="Ex.: ZN" />
+              <Input
+                id="iniciais"
+                className="h-12 text-base"
+                value={form.cooperado_iniciais}
+                onChange={(e) => setForm({ ...form, cooperado_iniciais: e.target.value })}
+                placeholder="Ex.: ZN"
+              />
             </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="loc">Localização</Label>
-            <Input id="loc" className="h-12 text-base" value={form.localizacao} onChange={(e) => setForm({ ...form, localizacao: e.target.value })} placeholder="Cidade / Região" />
+            <Input
+              id="loc"
+              className="h-12 text-base"
+              value={form.localizacao}
+              onChange={(e) => setForm({ ...form, localizacao: e.target.value })}
+              placeholder="Cidade / Região"
+            />
           </div>
+          <PaletteSelector value={form.cor} onChange={(cor) => setForm({ ...form, cor })} />
           <div className="grid gap-2">
             <Label htmlFor="obs">Observações</Label>
-            <Textarea id="obs" rows={3} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
+            <Textarea
+              id="obs"
+              rows={3}
+              value={form.observacoes}
+              onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" size="lg" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="outline" size="lg" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
           <Button size="lg" onClick={() => createMut.mutate(form)} disabled={createMut.isPending}>
             {createMut.isPending ? "Salvando..." : "Salvar fazenda"}
           </Button>
@@ -126,7 +233,11 @@ function FazendasPage() {
 
   return (
     <>
-      <PageHeader title="Fazendas" description="Cadastre e selecione a fazenda em uso." actions={dialog} />
+      <PageHeader
+        title="Fazendas"
+        description="Cadastre e selecione a fazenda em uso com cores personalizadas."
+        actions={dialog}
+      />
       <div className="p-4 sm:p-8">
         {fazendas.length === 0 ? (
           <EmptyState
@@ -139,15 +250,35 @@ function FazendasPage() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {fazendas.map((f) => {
               const ativa = fazendaAtual?.id === f.id;
+              const pal =
+                FAZENDA_PALETTES[(f.cor as ThemePaletteKey) || "emerald"] ||
+                FAZENDA_PALETTES.emerald;
               return (
                 <div
                   key={f.id}
-                  className={`rounded-xl border bg-card p-5 transition ${ativa ? "border-primary ring-2 ring-primary/20" : "hover:border-accent"}`}
+                  className={cn(
+                    "relative overflow-hidden rounded-xl border bg-card p-5 transition",
+                    ativa ? "border-primary ring-2 ring-primary/20" : "hover:border-accent",
+                  )}
                 >
+                  <div
+                    className="absolute left-0 top-0 h-1.5 w-full"
+                    style={{ backgroundColor: pal.badgeHex }}
+                  />
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h2 className="truncate">{f.nome}</h2>
-                      {ativa && <span className="mt-1 inline-block rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">Em uso</span>}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full border border-black/10 shadow-xs"
+                          style={{ backgroundColor: pal.badgeHex }}
+                        />
+                        <h2 className="truncate">{f.nome}</h2>
+                      </div>
+                      {ativa && (
+                        <span className="mt-1.5 inline-block rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">
+                          Em uso
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -163,7 +294,11 @@ function FazendasPage() {
                         size="icon"
                         aria-label="Excluir fazenda"
                         onClick={() => {
-                          if (confirm(`Excluir a fazenda "${f.nome}"? Todos os lotes e vendas serão removidos.`))
+                          if (
+                            confirm(
+                              `Excluir a fazenda "${f.nome}"? Todos os lotes e vendas serão removidos.`,
+                            )
+                          )
                             deleteMut.mutate(f.id);
                         }}
                       >
@@ -173,14 +308,27 @@ function FazendasPage() {
                   </div>
                   <div className="mt-4 space-y-2 text-sm text-muted-foreground">
                     {f.proprietario && (
-                      <p className="flex items-center gap-2"><User className="h-4 w-4" /> {f.proprietario}</p>
+                      <p className="flex items-center gap-2">
+                        <User className="h-4 w-4" /> {f.proprietario}
+                      </p>
                     )}
                     {f.localizacao && (
-                      <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {f.localizacao}</p>
+                      <p className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" /> {f.localizacao}
+                      </p>
                     )}
+                    <p className="flex items-center gap-2 text-xs">
+                      <Palette className="h-3.5 w-3.5 text-muted-foreground" /> Tema:{" "}
+                      <span className="font-medium text-foreground">{pal.nome}</span>
+                    </p>
                   </div>
                   {!ativa && (
-                    <Button variant="outline" className="mt-4 w-full" size="lg" onClick={() => setFazendaAtualId(f.id)}>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full"
+                      size="lg"
+                      onClick={() => setFazendaAtualId(f.id)}
+                    >
                       Usar esta fazenda
                     </Button>
                   )}
@@ -198,7 +346,14 @@ function FazendasPage() {
 
 function EditFazendaDialog({ fazenda, onClose }: { fazenda: Fazenda | null; onClose: () => void }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ nome: "", proprietario: "", cooperado_iniciais: "", localizacao: "", observacoes: "" });
+  const [form, setForm] = useState({
+    nome: "",
+    proprietario: "",
+    cooperado_iniciais: "",
+    localizacao: "",
+    observacoes: "",
+    cor: "emerald",
+  });
 
   useEffect(() => {
     if (fazenda) {
@@ -208,6 +363,7 @@ function EditFazendaDialog({ fazenda, onClose }: { fazenda: Fazenda | null; onCl
         cooperado_iniciais: fazenda.cooperado_iniciais ?? "",
         localizacao: fazenda.localizacao ?? "",
         observacoes: fazenda.observacoes ?? "",
+        cor: fazenda.cor ?? "emerald",
       });
     }
   }, [fazenda]);
@@ -222,6 +378,7 @@ function EditFazendaDialog({ fazenda, onClose }: { fazenda: Fazenda | null; onCl
         cooperado_iniciais: parsed.cooperado_iniciais || null,
         localizacao: parsed.localizacao || null,
         observacoes: parsed.observacoes || null,
+        cor: parsed.cor || "emerald",
       });
     },
     onSuccess: () => {
@@ -237,34 +394,62 @@ function EditFazendaDialog({ fazenda, onClose }: { fazenda: Fazenda | null; onCl
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar fazenda</DialogTitle>
-          <DialogDescription>Atualize os dados da fazenda.</DialogDescription>
+          <DialogDescription>Atualize os dados e a cor tema da fazenda.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label htmlFor="edit-nome">Nome da fazenda *</Label>
-            <Input id="edit-nome" className="h-12 text-base" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+            <Input
+              id="edit-nome"
+              className="h-12 text-base"
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            />
           </div>
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             <div className="grid gap-2">
               <Label htmlFor="edit-prop">Proprietário</Label>
-              <Input id="edit-prop" className="h-12 text-base" value={form.proprietario} onChange={(e) => setForm({ ...form, proprietario: e.target.value })} />
+              <Input
+                id="edit-prop"
+                className="h-12 text-base"
+                value={form.proprietario}
+                onChange={(e) => setForm({ ...form, proprietario: e.target.value })}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-iniciais">Iniciais (cooperado)</Label>
-              <Input id="edit-iniciais" className="h-12 text-base" value={form.cooperado_iniciais} onChange={(e) => setForm({ ...form, cooperado_iniciais: e.target.value })} />
+              <Input
+                id="edit-iniciais"
+                className="h-12 text-base"
+                value={form.cooperado_iniciais}
+                onChange={(e) => setForm({ ...form, cooperado_iniciais: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="edit-loc">Localização</Label>
-            <Input id="edit-loc" className="h-12 text-base" value={form.localizacao} onChange={(e) => setForm({ ...form, localizacao: e.target.value })} />
+            <Input
+              id="edit-loc"
+              className="h-12 text-base"
+              value={form.localizacao}
+              onChange={(e) => setForm({ ...form, localizacao: e.target.value })}
+            />
           </div>
+          <PaletteSelector value={form.cor} onChange={(cor) => setForm({ ...form, cor })} />
           <div className="grid gap-2">
             <Label htmlFor="edit-obs">Observações</Label>
-            <Textarea id="edit-obs" rows={3} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
+            <Textarea
+              id="edit-obs"
+              rows={3}
+              value={form.observacoes}
+              onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" size="lg" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" size="lg" onClick={onClose}>
+            Cancelar
+          </Button>
           <Button size="lg" onClick={() => updateMut.mutate()} disabled={updateMut.isPending}>
             {updateMut.isPending ? "Salvando..." : "Salvar alterações"}
           </Button>
@@ -323,30 +508,54 @@ function TalhoesSection({ fazendaId }: { fazendaId: string }) {
         </h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm"><Plus className="h-4 w-4" /> Adicionar</Button>
+            <Button variant="outline" size="sm">
+              <Plus className="h-4 w-4" /> Adicionar
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Novo talhão</DialogTitle>
-              <DialogDescription>Identifique a área plantada dentro desta fazenda.</DialogDescription>
+              <DialogDescription>
+                Identifique a área plantada dentro desta fazenda.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3 py-2">
               <div className="grid gap-2">
                 <Label>Nome / identificação *</Label>
-                <Input className="h-12 text-base" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex.: Talhão 1 — Pé do morro" />
+                <Input
+                  className="h-12 text-base"
+                  value={form.nome}
+                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  placeholder="Ex.: Talhão 1 — Pé do morro"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Variedade</Label>
-                <Input className="h-12 text-base" value={form.variedade} onChange={(e) => setForm({ ...form, variedade: e.target.value })} placeholder="Ex.: Catuaí Vermelho" />
+                <Input
+                  className="h-12 text-base"
+                  value={form.variedade}
+                  onChange={(e) => setForm({ ...form, variedade: e.target.value })}
+                  placeholder="Ex.: Catuaí Vermelho"
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Área (hectares)</Label>
-                <Input type="number" step="0.01" className="h-12 text-base" value={form.area_hectares} onChange={(e) => setForm({ ...form, area_hectares: e.target.value })} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="h-12 text-base"
+                  value={form.area_hectares}
+                  onChange={(e) => setForm({ ...form, area_hectares: e.target.value })}
+                />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" size="lg" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button size="lg" onClick={() => createMut.mutate()} disabled={createMut.isPending}>Salvar</Button>
+              <Button variant="outline" size="lg" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button size="lg" onClick={() => createMut.mutate()} disabled={createMut.isPending}>
+                Salvar
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -358,11 +567,16 @@ function TalhoesSection({ fazendaId }: { fazendaId: string }) {
       ) : (
         <ul className="space-y-1.5">
           {talhoes.map((t) => (
-            <li key={t.id} className="flex items-center justify-between gap-2 rounded-md bg-secondary/40 px-3 py-2 text-sm">
+            <li
+              key={t.id}
+              className="flex items-center justify-between gap-2 rounded-md bg-secondary/40 px-3 py-2 text-sm"
+            >
               <div className="min-w-0">
                 <p className="truncate font-medium">{t.nome}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {[t.variedade, t.area_hectares != null ? `${num(t.area_hectares, 2)} ha` : null].filter(Boolean).join(" • ") || "—"}
+                  {[t.variedade, t.area_hectares != null ? `${num(t.area_hectares, 2)} ha` : null]
+                    .filter(Boolean)
+                    .join(" • ") || "—"}
                 </p>
               </div>
               <Button

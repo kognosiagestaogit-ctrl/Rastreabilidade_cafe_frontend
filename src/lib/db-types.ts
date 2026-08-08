@@ -78,6 +78,7 @@ export type Fazenda = {
   cooperado_iniciais: string | null;
   localizacao: string | null;
   observacoes: string | null;
+  cor?: string | null;
 };
 
 export type OrdemServico = {
