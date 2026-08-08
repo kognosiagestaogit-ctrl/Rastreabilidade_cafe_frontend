@@ -68,10 +68,81 @@ let lotes: Lote[] = [
 ];
 
 let talhoes: Talhao[] = [];
-let vendas: Venda[] = [];
+let vendas: Venda[] = [
+  {
+    id: "mock-venda-1",
+    fazenda_id: "mock-fazenda-1",
+    cliente: "Exportadora Guaxupé",
+    numero_lote_cooperativa: "501",
+    tipo_venda: "FISICA",
+    data_venda: "2026-08-02",
+    sacas_vendidas: 50,
+    vl_bruto: 65000,
+    vl_liquido: 64025,
+    a_receber_previsto: 64025,
+    valor_recebido: null,
+    data_recebimento: null,
+    status: "A_RECEBER",
+    lote_id: null,
+    padrao: "Café Arábica Tipo 6",
+    quebra: null,
+    peneira: "17/18",
+    amostra: "AM-01",
+    nf_venda: "NF-1042",
+    premio_rainforest: null,
+    anuncio_venda: null,
+    nf_premio_rainforest: null,
+    premio_liquido_funrural: null,
+    observacoes: "Venda de lote especial para exportação",
+    cooperado: "FPN",
+    data_envio_armazem: "2026-08-01",
+    sacas_do_lote: 50,
+    nr_remessa_cooperativa: "REM-882",
+    lotes_agrupados: null,
+    descontos: null,
+    conta_corrente: null,
+    is_ds: null,
+    data_recebimento_premio: null,
+  },
+  {
+    id: "mock-venda-2",
+    fazenda_id: "mock-fazenda-1",
+    cliente: "Café Sul de Minas S/A",
+    numero_lote_cooperativa: "502",
+    tipo_venda: "CPR",
+    data_venda: "2026-07-20",
+    sacas_vendidas: 100,
+    vl_bruto: 130000,
+    vl_liquido: 128050,
+    a_receber_previsto: 128050,
+    valor_recebido: 128050,
+    data_recebimento: "2026-08-01",
+    premio_rainforest: 5000,
+    premio_liquido_funrural: 4925,
+    data_recebimento_premio: "2026-08-05",
+    nf_premio_rainforest: "NF-PR-88",
+    status: "RAINFOREST",
+    lote_id: null,
+    padrao: "Café Especial FPN",
+    quebra: null,
+    peneira: "16",
+    amostra: "AM-02",
+    nf_venda: "NF-998",
+    anuncio_venda: "AN-12",
+    observacoes: "Pagamento e prêmio faturados com sucesso",
+    cooperado: "FPN",
+    data_envio_armazem: "2026-07-18",
+    sacas_do_lote: 100,
+    nr_remessa_cooperativa: "REM-880",
+    lotes_agrupados: null,
+    descontos: null,
+    conta_corrente: "Banco do Brasil - Ag. 1234",
+    is_ds: null,
+  },
+];
 
 // Simulate network delay
-const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const mockDb = {
   // Fazendas
@@ -102,7 +173,7 @@ export const mockDb = {
   // Lotes
   async getLotes(fazendaId: string) {
     await delay();
-    return lotes.filter(l => l.fazenda_id === fazendaId).sort((a, b) => b.id.localeCompare(a.id));
+    return lotes.filter((l) => l.fazenda_id === fazendaId).sort((a, b) => b.id.localeCompare(a.id));
   },
   async createLote(data: Partial<Lote>) {
     await delay();
@@ -125,7 +196,7 @@ export const mockDb = {
   // Talhoes
   async getTalhoes(fazendaId: string) {
     await delay();
-    return talhoes.filter(t => t.fazenda_id === fazendaId);
+    return talhoes.filter((t) => t.fazenda_id === fazendaId);
   },
   async createTalhao(data: Partial<Talhao>) {
     await delay();
@@ -141,7 +212,9 @@ export const mockDb = {
   // Vendas
   async getVendas(fazendaId: string) {
     await delay();
-    return vendas.filter(v => v.fazenda_id === fazendaId).sort((a, b) => b.id.localeCompare(a.id));
+    return vendas
+      .filter((v) => v.fazenda_id === fazendaId)
+      .sort((a, b) => b.id.localeCompare(a.id));
   },
   async createVenda(data: Partial<Venda>) {
     await delay();
