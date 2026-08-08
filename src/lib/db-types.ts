@@ -60,6 +60,7 @@ export type Venda = {
   conta_corrente: string | null;
   is_ds: number | null;
   data_recebimento_premio: string | null;
+  status?: string | null;
 };
 
 export type Talhao = {
