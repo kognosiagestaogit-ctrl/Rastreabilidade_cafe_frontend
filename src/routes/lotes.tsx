@@ -382,10 +382,9 @@ function LoteCard({
           <span className="font-semibold text-foreground">#{lote.numero_lote_fazenda}</span>
           <div className="flex items-center gap-1">
             {hasPending && (
-              <AlertTriangle
-                className="h-4 w-4 text-destructive"
-                title="Faltam informações para esta etapa"
-              />
+              <span title="Faltam informações para esta etapa">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </span>
             )}
             {lote.lote_colheita && (
               <span className="text-xs text-muted-foreground">{lote.lote_colheita}</span>

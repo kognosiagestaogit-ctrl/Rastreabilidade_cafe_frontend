@@ -394,7 +394,7 @@ function VendasPage() {
           <StatCard icon={DollarSign} label="Bruto" value={brl(totais.bruto)} />
           <StatCard icon={TrendingUp} label="Líquido" value={brl(totais.liquido)} />
           <StatCard icon={Banknote} label="Recebido" value={brl(totais.recebido)} tone="success" />
-          {visao === "rainforest" ? (
+          {visaoApplied === "rainforest" ? (
             <StatCard
               icon={Award}
               label="Prêmio Rainforest"
@@ -541,10 +541,9 @@ function VendaCard({
           </div>
           <div className="flex items-center gap-1">
             {hasPending && (
-              <AlertTriangle
-                className="h-4 w-4 text-destructive shrink-0"
-                title="Faltam informações para esta etapa"
-              />
+              <span title="Faltam informações para esta etapa">
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+              </span>
             )}
             {hasRainforest && (
               <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
