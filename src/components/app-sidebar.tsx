@@ -1,9 +1,9 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Tractor, Coffee, ShoppingCart, LogIn, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
+import { LayoutDashboard, Tractor, Coffee, ShoppingCart, LogOut, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -13,6 +13,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { FazendaSwitcher } from "./fazenda-switcher";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
 
 const items = [
   { title: "Painel", url: "/", icon: LayoutDashboard },
@@ -23,7 +25,13 @@ const items = [
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/login" });
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -36,9 +44,7 @@ export function AppSidebar() {
             <p className="truncate text-base font-semibold leading-tight text-sidebar-foreground">
               Gestão Pedra Negra
             </p>
-            <p className="truncate text-xs text-sidebar-foreground/70">
-              Rastreabilidade & Vendas
-            </p>
+            <p className="truncate text-xs text-sidebar-foreground/70">Rastreabilidade & Vendas</p>
           </div>
         </div>
       </SidebarHeader>
@@ -54,8 +60,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active =
-                  item.url === "/" ? pathname === "/" : pathname.startsWith(item.url);
+                const active = item.url === "/" ? pathname === "/" : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active} size="lg">
@@ -71,6 +76,32 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      {user && (
+        <SidebarFooter className="border-t border-sidebar-border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sidebar-primary/20 text-sidebar-primary">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-sidebar-foreground">
+                  {user.name}
+                </p>
+                <p className="truncate text-[11px] text-sidebar-foreground/70">{user.email}</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="h-8 w-8 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              title="Sair da conta"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

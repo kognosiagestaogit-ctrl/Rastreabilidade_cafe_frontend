@@ -1,0 +1,200 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { Coffee, Eye, EyeOff, Lock, Mail, Sparkles, Sprout, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+
+export const Route = createFileRoute("/login")({
+  head: () => ({ meta: [{ title: "Login — Gestão Pedra Negra" }] }),
+  component: LoginPage,
+});
+
+function LoginPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated, login } = useAuth();
+  const [email, setEmail] = useState("gestor@pedranegra.com.br");
+  const [password, setPassword] = useState("123456");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: "/" });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Informe seu e-mail.");
+      return;
+    }
+    if (!password.trim()) {
+      toast.error("Informe sua senha.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
+      toast.success("Login realizado com sucesso! Bem-vindo.");
+      navigate({ to: "/" });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao efetuar login.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setEmail("gestor@pedranegra.com.br");
+    setPassword("123456");
+    setIsSubmitting(true);
+    try {
+      await login("gestor@pedranegra.com.br", "123456");
+      toast.success("Acesso de demonstração ativado!");
+      navigate({ to: "/" });
+    } catch (err: any) {
+      toast.error("Erro no login demo.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background p-4 sm:p-6 lg:p-8">
+      {/* Background Decorative Gradients */}
+      <div className="pointer-events-none absolute -top-40 -left-40 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-accent/15 blur-3xl" />
+
+      <div className="relative z-10 w-full max-w-md space-y-6">
+        {/* Logo & Header */}
+        <div className="text-center">
+          <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
+            <Coffee className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Fazenda Pedra Negra
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sistema Integrado de Gestão Agrícola, Rastreabilidade & Vendas
+          </p>
+        </div>
+
+        {/* Glassmorphism Card */}
+        <div className="rounded-2xl border bg-card/80 p-6 shadow-xl backdrop-blur-md sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">
+                E-mail de acesso
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu.email@pedranegra.com.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11 pl-9"
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium">
+                  Senha
+                </Label>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 pl-9 pr-10"
+                  disabled={isSubmitting}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(c) => setRememberMe(!!c)}
+                />
+                <label
+                  htmlFor="remember"
+                  className="text-xs font-medium text-muted-foreground cursor-pointer"
+                >
+                  Manter-me conectado
+                </label>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              size="lg"
+              className="h-11 w-full gap-2 text-base font-semibold shadow-md"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                "Entrando..."
+              ) : (
+                <>
+                  Entrar no sistema <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          <div className="relative my-6 text-center text-xs">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <span className="relative bg-card px-2 text-muted-foreground uppercase tracking-wider">
+              Acesso rápido
+            </span>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={handleDemoLogin}
+            disabled={isSubmitting}
+            className="h-11 w-full gap-2 border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
+          >
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            Entrar como Gestor Demo
+          </Button>
+        </div>
+
+        {/* Footer info */}
+        <p className="text-center text-xs text-muted-foreground">
+          &copy; {new Date().getFullYear()} Fazenda Pedra Negra. Todos os direitos reservados.
+        </p>
+      </div>
+    </div>
+  );
+}

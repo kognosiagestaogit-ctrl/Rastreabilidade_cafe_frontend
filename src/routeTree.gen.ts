@@ -13,6 +13,7 @@ import { Route as VendasRouteImport } from './routes/vendas'
 import { Route as RainforestRouteImport } from './routes/rainforest'
 import { Route as OrdemServicoRouteImport } from './routes/ordem-servico'
 import { Route as LotesRouteImport } from './routes/lotes'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as FazendasRouteImport } from './routes/fazendas'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +38,11 @@ const LotesRoute = LotesRouteImport.update({
   path: '/lotes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FinanceiroRoute = FinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/fazendas': typeof FazendasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/login': typeof LoginRoute
   '/lotes': typeof LotesRoute
   '/ordem-servico': typeof OrdemServicoRoute
   '/rainforest': typeof RainforestRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/fazendas': typeof FazendasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/login': typeof LoginRoute
   '/lotes': typeof LotesRoute
   '/ordem-servico': typeof OrdemServicoRoute
   '/rainforest': typeof RainforestRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/fazendas': typeof FazendasRoute
   '/financeiro': typeof FinanceiroRoute
+  '/login': typeof LoginRoute
   '/lotes': typeof LotesRoute
   '/ordem-servico': typeof OrdemServicoRoute
   '/rainforest': typeof RainforestRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/fazendas'
     | '/financeiro'
+    | '/login'
     | '/lotes'
     | '/ordem-servico'
     | '/rainforest'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/fazendas'
     | '/financeiro'
+    | '/login'
     | '/lotes'
     | '/ordem-servico'
     | '/rainforest'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/fazendas'
     | '/financeiro'
+    | '/login'
     | '/lotes'
     | '/ordem-servico'
     | '/rainforest'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FazendasRoute: typeof FazendasRoute
   FinanceiroRoute: typeof FinanceiroRoute
+  LoginRoute: typeof LoginRoute
   LotesRoute: typeof LotesRoute
   OrdemServicoRoute: typeof OrdemServicoRoute
   RainforestRoute: typeof RainforestRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LotesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/financeiro': {
       id: '/financeiro'
       path: '/financeiro'
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FazendasRoute: FazendasRoute,
   FinanceiroRoute: FinanceiroRoute,
+  LoginRoute: LoginRoute,
   LotesRoute: LotesRoute,
   OrdemServicoRoute: OrdemServicoRoute,
   RainforestRoute: RainforestRoute,
