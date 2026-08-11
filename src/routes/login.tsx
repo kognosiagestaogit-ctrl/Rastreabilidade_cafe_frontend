@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Coffee, Eye, EyeOff, Lock, Mail, Sparkles, Sprout, ArrowRight } from "lucide-react";
+import { Coffee, Eye, EyeOff, Lock, Mail, Sparkles, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,8 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, login } = useAuth();
-  const [email, setEmail] = useState("gestor@pedranegra.com.br");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,15 +52,17 @@ function LoginPage() {
   };
 
   const handleDemoLogin = async () => {
-    setEmail("gestor@pedranegra.com.br");
-    setPassword("123456");
+    const demoEmail = "admin@fazendapedranegra.com.br";
+    const demoPassword = "admin123";
+    setEmail(demoEmail);
+    setPassword(demoPassword);
     setIsSubmitting(true);
     try {
-      await login("gestor@pedranegra.com.br", "123456");
+      await login(demoEmail, demoPassword);
       toast.success("Acesso de demonstração ativado!");
       navigate({ to: "/" });
     } catch (err: any) {
-      toast.error("Erro no login demo.");
+      toast.error(err.message || "Erro no login demo. Verifique se o backend está rodando.");
     } finally {
       setIsSubmitting(false);
     }

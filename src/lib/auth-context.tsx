@@ -1,18 +1,26 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  apiClient,
+  getStoredToken,
+  setStoredToken,
+  clearStoredToken,
+} from "./api-client";
 
 export interface UserSession {
+  id: string;
   email: string;
-  name: string;
-  role: string;
+  nome: string;
+  role: "admin" | "gerente" | "funcionario";
+  ativo: boolean;
 }
 
-const AUTH_STORAGE_KEY = "pedra_negra_user_session";
+const SESSION_KEY = "pedra_negra_user_session";
 
 type AuthContextType = {
   user: UserSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -22,57 +30,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Tenta restaurar sessão salva e valida o token com o backend
   useEffect(() => {
-    if (typeof window === "undefined") {
-      setIsLoading(false);
-      return;
-    }
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        setUser(JSON.parse(stored));
+    const restore = async () => {
+      const token = getStoredToken();
+      const storedSession = typeof window !== "undefined"
+        ? localStorage.getItem(SESSION_KEY)
+        : null;
+
+      if (!token) {
+        setIsLoading(false);
+        return;
       }
-    } catch (e) {
-      console.error("Failed to load auth session", e);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    if (!email.trim() || !password.trim()) {
-      throw new Error("Preencha o e-mail e a senha para acessar.");
-    }
-
-    if (password.length < 4) {
-      throw new Error("A senha deve ter no mínimo 4 caracteres.");
-    }
-
-    const namePart = email.split("@")[0] || "Usuário";
-    const name = namePart
-      .split(".")
-      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-      .join(" ");
-
-    const session: UserSession = {
-      email: email.trim().toLowerCase(),
-      name: name || "Gestor Agrícola",
-      role: "Administrador de Fazenda",
+      try {
+        // Valida o token junto ao backend buscando o usuário atual
+        const me = await apiClient.get<UserSession>("/api/auth/me");
+        setUser(me);
+      } catch {
+        // Token inválido ou expirado — limpa tudo
+        clearStoredToken();
+        if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setUser(session);
+    restore();
+  }, []);
+
+  // Escuta o evento de 401 disparado pelo api-client
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearStoredToken();
+      if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY);
+      setUser(null);
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
+  }, []);
+
+  const login = async (email: string, password: string): Promise<void> => {
+    const data = await apiClient.post<{ token: string; user: UserSession }>("/api/auth/login", {
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    setStoredToken(data.token);
+    setUser(data.user);
+
     if (typeof window !== "undefined") {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
     }
-    return true;
   };
 
   const logout = () => {
+    clearStoredToken();
     setUser(null);
     if (typeof window !== "undefined") {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(SESSION_KEY);
     }
   };
 

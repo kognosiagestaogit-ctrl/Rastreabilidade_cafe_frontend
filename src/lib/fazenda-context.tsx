@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { mockDb } from "./mock-db";
+import { api as mockDb } from "./api";
 import type { Fazenda } from "./db-types";
 import { applyFazendaPalette } from "./theme-palettes";
 

@@ -85,7 +85,7 @@ export function AppSidebar() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-sidebar-foreground">
-                  {user.name}
+                  {user.nome}
                 </p>
                 <p className="truncate text-[11px] text-sidebar-foreground/70">{user.email}</p>
               </div>
