@@ -218,7 +218,7 @@ function LotesPage() {
   const lotes = lotesQ.data ?? [];
 
   const safrasDisponiveis = useMemo(
-    () => Array.from(new Set(lotes.map((l) => l.safra))).sort((a, b) => b - a),
+    () => Array.from(new Set(lotes.map((l) => l.safra))).sort((a, b) => (b ?? 0) - (a ?? 0)),
     [lotes],
   );
 
@@ -428,9 +428,11 @@ function NovoLoteDialog({
   fazendaId: string;
 }) {
   const qc = useQueryClient();
+  const currentYear = new Date().getFullYear();
   const [form, setForm] = useState({
     numero_lote_fazenda: "",
     lote_colheita: "",
+    safra: String(currentYear),
     talhao_ids: [] as string[],
     tipo_cafe: "NATURAL",
     colheita_tipo: "MANUAL" as "MANUAL" | "MECANICA",
@@ -482,6 +484,7 @@ function NovoLoteDialog({
       const computedStatus = calculateLoteStatus(form);
       await mockDb.createLote({
         fazenda_id: fazendaId,
+        safra: form.safra ? Number(form.safra) : new Date().getFullYear(),
         status: computedStatus,
         talhao_id: form.talhao_ids[0] ?? null,
         talhao_ids: form.talhao_ids,
@@ -512,6 +515,7 @@ function NovoLoteDialog({
       setForm({
         numero_lote_fazenda: "",
         lote_colheita: "",
+        safra: String(new Date().getFullYear()),
         talhao_ids: [],
         tipo_cafe: "NATURAL",
         colheita_tipo: "MANUAL",
@@ -551,7 +555,19 @@ function NovoLoteDialog({
         </DialogHeader>
         <div className="grid max-h-[70vh] gap-4 overflow-y-auto py-2 pr-1">
           <SectionHeader label="Colheita" />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-2">
+              <Label>Safra *</Label>
+              <Input
+                type="number"
+                min={2000}
+                max={2100}
+                className="h-12 text-base"
+                value={form.safra}
+                onChange={(e) => setForm({ ...form, safra: e.target.value })}
+                placeholder={String(new Date().getFullYear())}
+              />
+            </div>
             <div className="grid gap-2">
               <Label>Nº do lote (lotão) *</Label>
               <Input

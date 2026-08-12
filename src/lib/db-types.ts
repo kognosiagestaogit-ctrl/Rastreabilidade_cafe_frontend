@@ -5,7 +5,7 @@ export type Lote = {
   fazenda_id: string;
   talhao_id: string | null;
   talhao_ids: string[];
-  safra: number;
+  safra: number | null;
   numero_lote_fazenda: string;
   lote_colheita: string | null;
   tipo_cafe: string | null;

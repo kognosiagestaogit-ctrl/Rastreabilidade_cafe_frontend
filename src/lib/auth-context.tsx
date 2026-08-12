@@ -78,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
 
+    console.log("dat: ", data)
+
     setStoredToken(data.token);
     setUser(data.user);
 
