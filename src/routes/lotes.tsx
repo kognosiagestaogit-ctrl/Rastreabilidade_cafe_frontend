@@ -392,21 +392,105 @@ function LoteCard({
           </div>
         </div>
         {lote.tipo_cafe && <p className="mt-1 text-xs text-muted-foreground">{lote.tipo_cafe}</p>}
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          {lote.data_colheita_inicio && (
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" /> {dt(lote.data_colheita_inicio)}
-            </span>
+        
+        <div className="mt-3 flex flex-col gap-1.5 border-t pt-2 text-xs text-muted-foreground">
+          {lote.status === "EM_COLHEITA" && (
+            <>
+              <div className="flex justify-between">
+                <span>Início:</span>
+                <span className={!lote.data_colheita_inicio ? "text-destructive font-medium" : ""}>
+                  {lote.data_colheita_inicio ? dt(lote.data_colheita_inicio) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Fim:</span>
+                <span>{lote.data_colheita_fim ? dt(lote.data_colheita_fim) : "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Sacas:</span>
+                <span>{lote.numero_sacas ? `${num(lote.numero_sacas, 1)} sc` : "-"}</span>
+              </div>
+            </>
           )}
-          {lote.umidade != null && (
-            <span
-              className={`flex items-center gap-1 ${umidadeForaIdeal ? "text-warning-foreground font-medium" : ""}`}
-            >
-              <Droplets className="h-3 w-3" /> {num(lote.umidade, 1)}%
-              {umidadeForaIdeal && <AlertTriangle className="h-3 w-3" />}
-            </span>
+
+          {lote.status === "NO_TERREIRO" && (
+            <>
+              <div className="flex justify-between">
+                <span>Entrada Terreiro:</span>
+                <span className={!lote.data_entrada_terreiro ? "text-destructive font-medium" : ""}>
+                  {lote.data_entrada_terreiro ? dt(lote.data_entrada_terreiro) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Saída Terreiro:</span>
+                <span>{lote.data_saida_terreiro ? dt(lote.data_saida_terreiro) : "-"}</span>
+              </div>
+            </>
           )}
-          {lote.numero_sacas != null && <span>{num(lote.numero_sacas, 1)} sc</span>}
+
+          {lote.status === "NO_SECADOR" && (
+            <>
+              <div className="flex justify-between">
+                <span>Entrada Secador:</span>
+                <span className={!lote.data_entrada_secador ? "text-destructive font-medium" : ""}>
+                  {lote.data_entrada_secador ? dt(lote.data_entrada_secador) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Saída Secador:</span>
+                <span>{lote.data_saida_secador ? dt(lote.data_saida_secador) : "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Umidade:</span>
+                <span className={!lote.umidade ? "text-destructive font-medium" : umidadeForaIdeal ? "text-warning-foreground font-medium" : ""}>
+                  {lote.umidade ? `${num(lote.umidade, 1)}%` : "Pendente"}
+                </span>
+              </div>
+            </>
+          )}
+
+          {lote.status === "NA_TULHA" && (
+            <>
+              <div className="flex justify-between">
+                <span>Nº Tulha:</span>
+                <span className={!lote.numero_tulha ? "text-destructive font-medium" : ""}>
+                  {lote.numero_tulha || "Pendente"}
+                </span>
+              </div>
+            </>
+          )}
+
+          {lote.status === "BENEFICIADO" && (
+            <>
+              <div className="flex justify-between">
+                <span>Data Benefício:</span>
+                <span className={!lote.data_beneficio ? "text-destructive font-medium" : ""}>
+                  {lote.data_beneficio ? dt(lote.data_beneficio) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Sacas:</span>
+                <span>{lote.numero_sacas ? `${num(lote.numero_sacas, 1)} sc` : "-"}</span>
+              </div>
+            </>
+          )}
+
+          {lote.status === "ENVIADO_COOPERATIVA" && (
+            <>
+              <div className="flex justify-between">
+                <span>Data Envio:</span>
+                <span>{lote.data_envio_cooperativa ? dt(lote.data_envio_cooperativa) : "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Lote Coop:</span>
+                <span>{lote.numero_lote_cooperativa || "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>NF Remessa:</span>
+                <span>{lote.nf_remessa_cooperativa || "-"}</span>
+              </div>
+            </>
+          )}
         </div>
       </button>
       {!isLast && (

@@ -552,7 +552,7 @@ function VendaCard({
             )}
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground border-b pb-2">
           {venda.sacas_vendidas != null && (
             <div>
               <span className="text-[10px] uppercase text-muted-foreground">Sacas</span>
@@ -578,6 +578,67 @@ function VendaCard({
               <span className="text-[10px] uppercase text-muted-foreground">Saldo</span>
               <p className="font-semibold text-amber-600 dark:text-amber-400">{brl(saldo)}</p>
             </div>
+          )}
+        </div>
+
+        <div className="mt-2 flex flex-col gap-1.5 text-xs text-muted-foreground">
+          {currentStatus === "EM_ARMAZEM" && (
+            <p className="italic text-muted-foreground/70">Aguardando venda (sem campos)</p>
+          )}
+
+          {currentStatus === "A_RECEBER" && (
+            <>
+              <div className="flex justify-between">
+                <span>Data Venda:</span>
+                <span className={!venda.data_venda ? "text-destructive font-medium" : ""}>
+                  {venda.data_venda ? dt(venda.data_venda) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Valor Bruto:</span>
+                <span className={!venda.vl_bruto ? "text-destructive font-medium" : ""}>
+                  {venda.vl_bruto ? brl(venda.vl_bruto) : "Pendente"}
+                </span>
+              </div>
+            </>
+          )}
+
+          {currentStatus === "RECEBIDA" && (
+            <>
+              <div className="flex justify-between">
+                <span>Data Rec.:</span>
+                <span className={!venda.data_recebimento ? "text-destructive font-medium" : ""}>
+                  {venda.data_recebimento ? dt(venda.data_recebimento) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Valor Rec.:</span>
+                <span className={!venda.valor_recebido ? "text-destructive font-medium" : ""}>
+                  {venda.valor_recebido ? brl(venda.valor_recebido) : "Pendente"}
+                </span>
+              </div>
+            </>
+          )}
+
+          {currentStatus === "RAINFOREST" && (
+            <>
+              <div className="flex justify-between">
+                <span>Prêmio RF:</span>
+                <span className={!venda.premio_rainforest ? "text-destructive font-medium" : ""}>
+                  {venda.premio_rainforest ? brl(venda.premio_rainforest) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Data Prêmio:</span>
+                <span className={!venda.data_recebimento_premio ? "text-destructive font-medium" : ""}>
+                  {venda.data_recebimento_premio ? dt(venda.data_recebimento_premio) : "Pendente"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>NF Prêmio:</span>
+                <span>{venda.nf_premio_rainforest || "-"}</span>
+              </div>
+            </>
           )}
         </div>
       </button>
