@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Tractor, Coffee, ShoppingCart, LogOut, User } from "lucide-react";
+import { LayoutDashboard, Tractor, Coffee, ShoppingCart, LogOut, User, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,8 @@ import {
 import { FazendaSwitcher } from "./fazenda-switcher";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { ConfigDialog } from "./config-dialog";
+import { useState } from "react";
 
 const items = [
   { title: "Painel", url: "/", icon: LayoutDashboard },
@@ -27,6 +29,7 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [configOpen, setConfigOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -72,6 +75,12 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" onClick={() => setConfigOpen(true)}>
+                  <Settings className="h-5 w-5" />
+                  <span className="text-[15px]">Configurações</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -102,6 +111,7 @@ export function AppSidebar() {
           </div>
         </SidebarFooter>
       )}
+      <ConfigDialog open={configOpen} onOpenChange={setConfigOpen} />
     </Sidebar>
   );
 }
