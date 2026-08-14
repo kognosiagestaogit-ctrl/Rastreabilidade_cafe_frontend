@@ -22,6 +22,8 @@ import {
   Calendar,
   Filter,
   RotateCcw,
+  LayoutGrid,
+  LayoutList,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -180,6 +182,7 @@ function VendasPage() {
 
   const [buscaApplied, setBuscaApplied] = useState("");
   const [visaoApplied, setVisaoApplied] = useState<Visao>("todas");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   const [novaOpen, setNovaOpen] = useState(false);
   const [editVenda, setEditVenda] = useState<Venda | null>(null);
@@ -387,6 +390,24 @@ function VendasPage() {
           <Button variant="outline" onClick={handleClearFilters} className="h-10 gap-2">
             <RotateCcw className="h-4 w-4" /> Limpar filtros
           </Button>
+          <div className="ml-auto flex items-center gap-1 rounded-lg border bg-card p-1">
+            <Button
+              variant={viewMode === "kanban" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-3 gap-1.5"
+              onClick={() => setViewMode("kanban")}
+            >
+              <LayoutGrid className="h-4 w-4" /> Kanban
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-3 gap-1.5"
+              onClick={() => setViewMode("list")}
+            >
+              <LayoutList className="h-4 w-4" /> Lista
+            </Button>
+          </div>
         </div>
 
         <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
@@ -423,8 +444,10 @@ function VendasPage() {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {VENDA_STATUS_ORDER.map((status) => {
+          <>
+            {viewMode === "kanban" && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {VENDA_STATUS_ORDER.map((status) => {
               const itens = vendasVisao.filter((v) => getVendaEffectiveStatus(v) === status);
               const Icon = VENDA_STATUS_ICONS[status];
               return (
@@ -473,6 +496,11 @@ function VendasPage() {
               );
             })}
           </div>
+            )}
+            {viewMode === "list" && (
+              <VendaListView vendas={vendasVisao} onEdit={setEditVenda} />
+            )}
+          </>
         )}
       </div>
 
@@ -1165,7 +1193,7 @@ function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: () => vo
           : liquidoAuto;
       const premioLiq = premioLiquidoAuto;
       await mockDb.updateVenda(venda.id, {
-        status: form.status,
+        status: calculateVendaStatus(parsed),
         cliente: parsed.cliente,
         numero_lote_cooperativa: parsed.numero_lote_cooperativa || null,
         padrao: parsed.padrao || null,
@@ -1225,31 +1253,10 @@ function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: () => vo
         <DialogHeader>
           <DialogTitle>Venda — {venda.cliente}</DialogTitle>
           <DialogDescription>
-            Atualize os dados e a etapa da venda conforme o andamento.
+            Atualize os dados e a etapa da venda será recalculada automaticamente.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
-          <div className="grid gap-2">
-            <Label>Etapa atual</Label>
-            <Select
-              value={form.status}
-              onValueChange={(v: VendaStatus) => setForm({ ...form, status: v })}
-            >
-              <SelectTrigger className="h-12 text-base">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VENDA_STATUS_ORDER.map((s, idx) => {
-                  const isSkipping = idx > originalIndex + 1;
-                  return (
-                    <SelectItem key={s} value={s} disabled={isSkipping}>
-                      {VENDA_STATUS_LABEL[s]} {isSkipping ? "(Etapa bloqueada)" : ""}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
 
           <SectionHeader label="Identificação & Armazém" />
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1660,5 +1667,69 @@ function RelatorioVendasDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda) => void }) {
+  if (vendas.length === 0) {
+    return <p className="py-12 text-center text-sm text-muted-foreground">Nenhuma venda encontrada.</p>;
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-secondary/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <th className="px-4 py-3">Cliente</th>
+            <th className="px-4 py-3">Etapa</th>
+            <th className="px-4 py-3">Sacas</th>
+            <th className="px-4 py-3">Valor Bruto</th>
+            <th className="px-4 py-3">Recebido</th>
+            <th className="px-4 py-3">Lote Coop.</th>
+            <th className="px-4 py-3">NF Prêmio</th>
+          </tr>
+        </thead>
+        <tbody>
+          {vendas.map((venda, i) => {
+            const hasPending = hasPendingVendaData(venda);
+            const status = getVendaEffectiveStatus(venda);
+            const Icon = VENDA_STATUS_ICONS[status];
+            
+            return (
+              <tr
+                key={venda.id}
+                onClick={() => onEdit(venda)}
+                className={`cursor-pointer border-b transition-colors last:border-0 hover:bg-secondary/30 ${
+                  i % 2 === 0 ? "" : "bg-secondary/10"
+                } ${hasPending ? "text-destructive" : ""}`}
+              >
+                <td className="px-4 py-3 font-semibold">
+                  <span className="flex items-center gap-2">
+                    {hasPending && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                    {venda.cliente || "Cliente não informado"}
+                  </span>
+                  {venda.tipo_venda && (
+                    <span className="block text-[10px] uppercase text-muted-foreground mt-0.5">
+                      {venda.tipo_venda}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium w-fit">
+                    <Icon className="h-3 w-3 shrink-0" />
+                    {VENDA_STATUS_LABEL[status]}
+                  </span>
+                </td>
+                <td className="px-4 py-3">{venda.sacas_vendidas ? `${num(venda.sacas_vendidas, 1)} sc` : "-"}</td>
+                <td className="px-4 py-3">{venda.vl_bruto ? brl(venda.vl_bruto) : "-"}</td>
+                <td className="px-4 py-3">{venda.valor_recebido ? brl(venda.valor_recebido) : "-"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{venda.numero_lote_cooperativa || "-"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{venda.nf_premio_rainforest || "-"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
