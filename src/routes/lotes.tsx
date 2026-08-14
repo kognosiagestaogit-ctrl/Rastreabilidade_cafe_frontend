@@ -975,6 +975,22 @@ function NovoLoteDialog({
           <SectionHeader label="Depósito Cooperativa" />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
+              <Label>Nº Lote Cooperativa</Label>
+              <Input
+                className="h-12 text-base"
+                value={form.numero_lote_cooperativa}
+                onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Amostra</Label>
+              <Input
+                className="h-12 text-base"
+                value={form.amostra}
+                onChange={(e) => setForm({ ...form, amostra: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
               <Label>
                 Data envio cooperativa
               </Label>
@@ -986,14 +1002,6 @@ function NovoLoteDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label>Nº Lote Cooperativa</Label>
-              <Input
-                className="h-12 text-base"
-                value={form.numero_lote_cooperativa}
-                onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
               <Label>
                 NF Remessa Cooperativa
               </Label>
@@ -1001,14 +1009,6 @@ function NovoLoteDialog({
                 className="h-12 text-base"
                 value={form.nf_remessa_cooperativa}
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Amostra</Label>
-              <Input
-                className="h-12 text-base"
-                value={form.amostra}
-                onChange={(e) => setForm({ ...form, amostra: e.target.value })}
               />
             </div>
           </div>
@@ -1385,6 +1385,24 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
           <SectionHeader label="Depósito Cooperativa" locked={!canFillCooperativa} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
+              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Nº lote cooperativa</Label>
+              <Input
+                disabled={!canFillCooperativa}
+                className="h-12 text-base"
+                value={form.numero_lote_cooperativa}
+                onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Amostra</Label>
+              <Input
+                disabled={!canFillCooperativa}
+                className="h-12 text-base"
+                value={form.amostra}
+                onChange={(e) => setForm({ ...form, amostra: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
               <Label className={!canFillCooperativa ? "opacity-50" : ""}>Data envio cooperativa</Label>
               <Input
                 type="date"
@@ -1395,30 +1413,12 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
               />
             </div>
             <div className="grid gap-2">
-              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Nº lote cooperativa</Label>
-              <Input
-                disabled={!canFillCooperativa}
-                className="h-12 text-base"
-                value={form.numero_lote_cooperativa}
-                onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
               <Label className={!canFillCooperativa ? "opacity-50" : ""}>NF remessa cooperativa</Label>
               <Input
                 disabled={!canFillCooperativa}
                 className="h-12 text-base"
                 value={form.nf_remessa_cooperativa}
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Amostra</Label>
-              <Input
-                disabled={!canFillCooperativa}
-                className="h-12 text-base"
-                value={form.amostra}
-                onChange={(e) => setForm({ ...form, amostra: e.target.value })}
               />
             </div>
           </div>
