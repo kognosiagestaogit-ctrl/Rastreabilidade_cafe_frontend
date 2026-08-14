@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Settings, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -11,16 +11,106 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/api-client";
 
-export function ConfigDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+interface IntegracaoCredencial {
+  id: string;
+  provider: string;
+  username: string;
+  has_credentials: boolean;
+  status: string;
+  error_message: string | null;
+  last_sync_at: string | null;
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
+
+export function ConfigDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [existing, setExisting] = useState<IntegracaoCredencial | null>(null);
+  const [loadingFetch, setLoadingFetch] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
+  const [showSenha, setShowSenha] = useState(false);
 
-  const handleSave = () => {
-    // Aqui futuramente será chamada a API para salvar
-    toast.success("Credenciais da Minasul salvas com sucesso!");
-    onOpenChange(false);
+  // Busca integração existente ao abrir o modal
+  useEffect(() => {
+    if (!open) return;
+    setLoadingFetch(true);
+    apiClient
+      .get<IntegracaoCredencial[]>("/api/integracoes")
+      .then((list) => {
+        const minasul = list.find((i) => i.provider === "minasul") ?? null;
+        setExisting(minasul);
+        if (minasul) {
+          setLogin(minasul.username);
+          // Senha nunca vem da API — mostramos placeholder mascarado
+          setSenha("");
+        } else {
+          setLogin("");
+          setSenha("");
+        }
+      })
+      .catch(() => {
+        toast.error("Não foi possível carregar as configurações.");
+      })
+      .finally(() => setLoadingFetch(false));
+  }, [open]);
+
+  const handleSave = async () => {
+    if (!login.trim()) {
+      toast.error("Informe o login da Minasul.");
+      return;
+    }
+    if (!existing && !senha.trim()) {
+      toast.error("Informe a senha da Minasul.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (existing) {
+        // Atualizar: só envia senha se foi alterada
+        const body: Record<string, string> = {
+          provider: "minasul",
+          username: login.trim(),
+        };
+        if (senha.trim()) body.password = senha.trim();
+
+        await apiClient.put(`/api/integracoes/${existing.id}`, body);
+        toast.success("Credenciais da Minasul atualizadas!");
+      } else {
+        // Criar nova
+        await apiClient.post("/api/integracoes", {
+          provider: "minasul",
+          username: login.trim(),
+          password: senha.trim(),
+        });
+        toast.success("Credenciais da Minasul salvas!");
+      }
+
+      // Recarrega para refletir o estado novo
+      const list = await apiClient.get<IntegracaoCredencial[]>("/api/integracoes");
+      const minasul = list.find((i) => i.provider === "minasul") ?? null;
+      setExisting(minasul);
+      setSenha(""); // limpa campo de senha após salvar
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao salvar credenciais.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const isEditing = !!existing;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -34,36 +124,108 @@ export function ConfigDialog({ open, onOpenChange }: { open: boolean; onOpenChan
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4 flex flex-col gap-4">
+        <div className="mt-2 flex flex-col gap-4">
+          {/* ── Seção Minasul ─────────────────────────────────────────── */}
           <div className="rounded-lg border bg-secondary/30 p-4">
-            <h3 className="mb-1 font-semibold text-foreground">Minasul credenciais</h3>
-            <p className="mb-4 text-xs text-muted-foreground">
-              Será usado para buscar dados automaticamente em minasul.
-            </p>
-            <div className="grid gap-3">
-              <div className="grid gap-1.5">
-                <Label htmlFor="minasul-login">Login</Label>
-                <Input
-                  id="minasul-login"
-                  placeholder="Digite o login"
-                  value={login}
-                  onChange={(e) => setLogin(e.target.value)}
-                />
+            <div className="mb-4 flex items-start justify-between gap-2">
+              <div>
+                <h3 className="font-semibold text-foreground">Minasul credenciais</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Será usado para buscar dados automaticamente em minasul.
+                </p>
               </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="minasul-senha">Senha</Label>
-                <Input
-                  id="minasul-senha"
-                  type="password"
-                  placeholder="Digite a senha"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                />
-              </div>
+
+              {/* Badge de status */}
+              {!loadingFetch && (
+                <span
+                  className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    isEditing
+                      ? existing?.status === "ERRO"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {isEditing ? (
+                    existing?.status === "ERRO" ? (
+                      <>
+                        <AlertCircle className="h-3 w-3" /> Erro
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3 w-3" /> Configurado
+                      </>
+                    )
+                  ) : (
+                    "Não configurado"
+                  )}
+                </span>
+              )}
             </div>
+
+            {loadingFetch ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="minasul-login">Login</Label>
+                  <Input
+                    id="minasul-login"
+                    placeholder="Digite o login"
+                    value={login}
+                    onChange={(e) => setLogin(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label htmlFor="minasul-senha">
+                    Senha{isEditing && " (deixe em branco para não alterar)"}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="minasul-senha"
+                      type={showSenha ? "text" : "password"}
+                      placeholder={isEditing ? "••••••••" : "Digite a senha"}
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      autoComplete="new-password"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSenha((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                    >
+                      {showSenha ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mensagem de erro da integração */}
+                {existing?.status === "ERRO" && existing.error_message && (
+                  <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    {existing.error_message}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-4 flex justify-end">
-              <Button onClick={handleSave} className="gap-2">
-                <Save className="h-4 w-4" /> Salvar credenciais
+              <Button onClick={handleSave} disabled={saving || loadingFetch} className="gap-2">
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {isEditing ? "Atualizar credenciais" : "Salvar credenciais"}
               </Button>
             </div>
           </div>
