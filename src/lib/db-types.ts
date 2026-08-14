@@ -24,6 +24,7 @@ export type Lote = {
   numero_sacas: number | null;
   numero_lote_cooperativa: string | null;
   nf_remessa_cooperativa: string | null;
+  amostra: string | null;
   observacoes: string | null;
 };
 

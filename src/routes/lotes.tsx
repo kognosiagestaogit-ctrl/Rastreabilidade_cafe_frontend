@@ -66,6 +66,7 @@ const schema = z.object({
   colheita_tipo: z.enum(["MANUAL", "MECANICA"]).optional(),
   data_colheita_inicio: z.string().optional().or(z.literal("")),
   numero_sacas: z.string().optional().or(z.literal("")),
+  amostra: z.string().max(100).optional().or(z.literal("")),
   observacoes: z.string().max(1000).optional().or(z.literal("")),
 });
 
@@ -647,6 +648,7 @@ function NovoLoteDialog({
     data_envio_cooperativa: "",
     numero_lote_cooperativa: "",
     nf_remessa_cooperativa: "",
+    amostra: "",
   });
 
   const talhoesQ = useQuery({
@@ -702,6 +704,7 @@ function NovoLoteDialog({
         data_envio_cooperativa: form.data_envio_cooperativa || null,
         numero_lote_cooperativa: form.numero_lote_cooperativa || null,
         nf_remessa_cooperativa: form.nf_remessa_cooperativa || null,
+        amostra: form.amostra || null,
       });
     },
     onSuccess: () => {
@@ -729,6 +732,7 @@ function NovoLoteDialog({
         data_envio_cooperativa: "",
         numero_lote_cooperativa: "",
         nf_remessa_cooperativa: "",
+        amostra: "",
       });
     },
     onError: (e: any) => toast.error(e.message ?? "Erro"),
@@ -999,6 +1003,14 @@ function NovoLoteDialog({
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
               />
             </div>
+            <div className="grid gap-2">
+              <Label>Amostra</Label>
+              <Input
+                className="h-12 text-base"
+                value={form.amostra}
+                onChange={(e) => setForm({ ...form, amostra: e.target.value })}
+              />
+            </div>
           </div>
 
           <SectionHeader label="Observações" />
@@ -1068,6 +1080,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     numero_sacas: lote.numero_sacas?.toString() ?? "",
     numero_lote_cooperativa: lote.numero_lote_cooperativa ?? "",
     nf_remessa_cooperativa: lote.nf_remessa_cooperativa ?? "",
+    amostra: lote.amostra ?? "",
     observacoes: lote.observacoes ?? "",
   });
 
@@ -1096,6 +1109,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
         numero_sacas: form.numero_sacas ? Number(form.numero_sacas) : null,
         numero_lote_cooperativa: canFillCooperativa ? form.numero_lote_cooperativa || null : null,
         nf_remessa_cooperativa: canFillCooperativa ? form.nf_remessa_cooperativa || null : null,
+        amostra: canFillCooperativa ? form.amostra || null : null,
         observacoes: form.observacoes || null,
       });
     },
@@ -1389,13 +1403,22 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
                 onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
               />
             </div>
-            <div className="grid gap-2 sm:col-span-2">
+            <div className="grid gap-2">
               <Label className={!canFillCooperativa ? "opacity-50" : ""}>NF remessa cooperativa</Label>
               <Input
                 disabled={!canFillCooperativa}
                 className="h-12 text-base"
                 value={form.nf_remessa_cooperativa}
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Amostra</Label>
+              <Input
+                disabled={!canFillCooperativa}
+                className="h-12 text-base"
+                value={form.amostra}
+                onChange={(e) => setForm({ ...form, amostra: e.target.value })}
               />
             </div>
           </div>
