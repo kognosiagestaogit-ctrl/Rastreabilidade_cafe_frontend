@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { apiClient } from "@/lib/api-client";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -659,6 +660,23 @@ function NovoLoteDialog({
   });
   const talhoes = talhoesQ.data ?? [];
 
+  const [quantidadeVendas, setQuantidadeVendas] = useState<number | null>(null);
+
+  const verificarVendasMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post<any>("/api/integracoes/1/sync/detalhes", {
+        salesId: form.amostra,
+        coopBatchId: form.numero_lote_cooperativa,
+      });
+      return res;
+    },
+    onSuccess: (data) => {
+      setQuantidadeVendas(data.quantidade_vendas ?? 0);
+      toast.success("Vendas verificadas com sucesso!");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao verificar vendas"),
+  });
+
   const isColheitaPreenchida = form.numero_lote_fazenda.trim().length > 0;
 
   const canFillTerreiro = isColheitaPreenchida;
@@ -1011,6 +1029,21 @@ function NovoLoteDialog({
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
               />
             </div>
+            <div className="flex items-center gap-4 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!form.amostra || !form.numero_lote_cooperativa || verificarVendasMut.isPending}
+                onClick={() => verificarVendasMut.mutate()}
+              >
+                {verificarVendasMut.isPending ? "Verificando..." : "Verificar vendas Minasul"}
+              </Button>
+              {/* {quantidadeVendas !== null && (
+                <div className="text-sm">
+                  Quantidade de vendas: <strong>{quantidadeVendas}</strong>
+                </div>
+              )} */}
+            </div>
           </div>
 
           <SectionHeader label="Observações" />
@@ -1058,6 +1091,23 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     },
   });
   const talhoes = talhoesQ.data ?? [];
+
+  const [quantidadeVendas, setQuantidadeVendas] = useState<number | null>(null);
+
+  const verificarVendasMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post<any>("/api/integracoes/1/sync/detalhes", {
+        salesId: form.amostra,
+        coopBatchId: form.numero_lote_cooperativa,
+      });
+      return res;
+    },
+    onSuccess: (data) => {
+      setQuantidadeVendas(data.quantidade_vendas ?? 0);
+      toast.success("Vendas verificadas com sucesso!");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao verificar vendas"),
+  });
 
   const [form, setForm] = useState({
     status: lote.status as LoteStatus,
@@ -1402,6 +1452,8 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
                 onChange={(e) => setForm({ ...form, amostra: e.target.value })}
               />
             </div>
+
+
             <div className="grid gap-2">
               <Label className={!canFillCooperativa ? "opacity-50" : ""}>Data envio cooperativa</Label>
               <Input
@@ -1420,6 +1472,21 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
                 value={form.nf_remessa_cooperativa}
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
               />
+            </div>
+             <div className="flex items-center gap-4 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!canFillCooperativa || !form.amostra || !form.numero_lote_cooperativa || verificarVendasMut.isPending}
+                onClick={() => verificarVendasMut.mutate()}
+              >
+                {verificarVendasMut.isPending ? "Verificando..." : "Verificar vendas Minasul"}
+              </Button>
+              {/* {quantidadeVendas !== null && (
+                <div className="text-sm">
+                  Quantidade de vendas: <strong>{quantidadeVendas}</strong>
+                </div>
+              )} */}
             </div>
           </div>
 
