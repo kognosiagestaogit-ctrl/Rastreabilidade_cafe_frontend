@@ -9,6 +9,7 @@ import { useFazendas } from "@/lib/fazenda-context";
 import { mockDb } from "@/lib/mock-db";
 import { brl, num, STATUS_LABEL } from "@/lib/format";
 import type { Lote, Venda } from "@/lib/db-types";
+import { apiClient } from "@/lib/api-client";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Painel — Gestão Pedra Negra" }] }),
@@ -31,6 +32,14 @@ function Dashboard() {
     enabled: !!fazendaAtual,
     queryFn: async (): Promise<Venda[]> => {
       return await mockDb.getVendas(fazendaAtual!.id);
+    },
+  });
+
+  const dashboardQuery = useQuery({
+    queryKey: ["dashboard", fazendaAtual?.id],
+    enabled: !!fazendaAtual,
+    queryFn: async (): Promise<any> => {
+      return await apiClient.get(`/api/fazendas/${fazendaAtual!.id}/dashboard`);
     },
   });
 
@@ -58,14 +67,13 @@ function Dashboard() {
 
   const lotes = lotesQuery.data ?? [];
   const vendas = vendasQuery.data ?? [];
-  const totalSacasProduzidas = lotes.reduce((s, l) => s + Number(l.numero_sacas ?? 0), 0);
-  const totalSacasVendidas = vendas.reduce((s, v) => s + Number(v.sacas_vendidas ?? 0), 0);
-  const totalBruto = vendas.reduce((s, v) => s + Number(v.vl_bruto ?? 0), 0);
+  const dashboard = dashboardQuery.data;
+
+  const totalSacasProduzidas = dashboard?.total_sacas_produzidas ?? 0;
+  const totalSacasVendidas = dashboard?.total_sacas_vendidas ?? 0;
+  const totalBruto = dashboard?.total_faturado ?? 0;
   const totalRecebido = vendas.reduce((s, v) => s + Number(v.valor_recebido ?? 0), 0);
-  const aReceber = vendas.reduce(
-    (s, v) => s + (Number(v.vl_liquido ?? v.a_receber_previsto ?? 0) - Number(v.valor_recebido ?? 0)),
-    0,
-  );
+  const aReceber = dashboard?.total_a_receber ?? 0;
   const lotesUmidadeAlerta = lotes.filter(
     (l) => l.umidade != null && (Number(l.umidade) < 10.5 || Number(l.umidade) > 12),
   );
