@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { z } from "zod";
 import {
   ShoppingCart,
@@ -24,6 +24,10 @@ import {
   RotateCcw,
   LayoutGrid,
   LayoutList,
+  Layers,
+  ChevronDown,
+  ChevronRight,
+  Pencil,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -53,7 +57,8 @@ import {
 import { useFazendas } from "@/lib/fazenda-context";
 import { mockDb } from "@/lib/mock-db";
 import { brl, dt, num } from "@/lib/format";
-import type { Venda } from "@/lib/db-types";
+import type { Venda, Amostra } from "@/lib/db-types";
+import { apiClient } from "@/lib/api-client";
 
 const searchSchema = z.object({
   visao: z.enum(["todas", "receber", "rainforest"]).default("todas").catch("todas"),
@@ -172,7 +177,8 @@ const vendaSchema = z.object({
   data_recebimento_premio: z.string().optional().or(z.literal("")),
 });
 
-function VendasPage() {
+
+export function VendasPage() {
   const { fazendaAtual, fazendas } = useFazendas();
   const qc = useQueryClient();
   const search = Route.useSearch();
@@ -182,9 +188,8 @@ function VendasPage() {
 
   const [buscaApplied, setBuscaApplied] = useState("");
   const [visaoApplied, setVisaoApplied] = useState<Visao>("todas");
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
-
-  const [novaOpen, setNovaOpen] = useState(false);
+  
+      const [novaOpen, setNovaOpen] = useState(false);
   const [editVenda, setEditVenda] = useState<Venda | null>(null);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
 
@@ -202,68 +207,16 @@ function VendasPage() {
     toast.info("Filtros limpos");
   };
 
+  
   const vendasQ = useQuery({
     queryKey: ["vendas", fazendaAtual?.id],
     enabled: !!fazendaAtual,
     queryFn: async (): Promise<Venda[]> => {
-      return await mockDb.getVendas(fazendaAtual!.id);
+      return apiClient.get(`/api/fazendas/${fazendaAtual!.id}/vendas`);
     },
   });
 
-  const moveMut = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: VendaStatus }) => {
-      await mockDb.updateVenda(id, { status });
-    },
-    onSuccess: () => {
-      toast.success("Venda atualizada");
-      qc.invalidateQueries({ queryKey: ["vendas"] });
-    },
-    onError: (e: any) => toast.error(e.message ?? "Erro ao atualizar venda"),
-  });
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, newStatus: VendaStatus) => {
-    e.preventDefault();
-    const vendaId = e.dataTransfer.getData("text/plain");
-    if (!vendaId) return;
-
-    const venda = vendasQ.data?.find((v) => v.id === vendaId);
-    if (!venda) return;
-
-    const currentStatus = getVendaEffectiveStatus(venda);
-    if (currentStatus === newStatus) return;
-
-    const currentIndex = VENDA_STATUS_ORDER.indexOf(currentStatus);
-    const newIndex = VENDA_STATUS_ORDER.indexOf(newStatus);
-
-    if (newIndex > currentIndex) {
-      if (newIndex > currentIndex + 1) {
-        toast.error(
-          "A venda só pode ser avançada para a etapa imediatamente seguinte (uma de cada vez).",
-        );
-        return;
-      }
-      if (hasPendingVendaData(venda)) {
-        toast.error(
-          "Esta venda possui informações pendentes na etapa atual (em vermelho). Clique na venda e preencha as informações antes de avançar.",
-        );
-        return;
-      }
-    }
-
-    if (newIndex < currentIndex) {
-      if (
-        !window.confirm(
-          "Você está voltando esta venda para uma etapa anterior. Dados das etapas seguintes poderão ser considerados inválidos ou perder o sentido. Confirma o retorno?",
-        )
-      ) {
-        return;
-      }
-    }
-
-    moveMut.mutate({ id: venda.id, status: newStatus });
-  };
-
-  const vendas = vendasQ.data ?? [];
+    const vendas = vendasQ.data ?? [];
 
   const vendasVisao = useMemo(() => {
     return vendas.filter((v) => {
@@ -282,12 +235,8 @@ function VendasPage() {
   }, [vendas, visaoApplied, buscaApplied]);
 
   const totais = useMemo(() => {
-    let bruto = 0,
-      liquido = 0,
-      recebido = 0,
-      saldo = 0,
-      premio = 0,
-      sacas = 0;
+    let bruto = 0, liquido = 0, recebido = 0, saldo = 0, premio = 0, sacas = 0;
+    
     for (const v of vendasVisao) {
       bruto += Number(v.vl_bruto ?? 0);
       const liq = Number(v.vl_liquido ?? v.a_receber_previsto ?? 0);
@@ -297,6 +246,7 @@ function VendasPage() {
       premio += Number(v.premio_rainforest ?? 0);
       sacas += Number(v.sacas_vendidas ?? 0);
     }
+    
     return { bruto, liquido, recebido, saldo, premio, sacas };
   }, [vendasVisao]);
 
@@ -390,24 +340,6 @@ function VendasPage() {
           <Button variant="outline" onClick={handleClearFilters} className="h-10 gap-2">
             <RotateCcw className="h-4 w-4" /> Limpar filtros
           </Button>
-          <div className="ml-auto flex items-center gap-1 rounded-lg border bg-card p-1">
-            <Button
-              variant={viewMode === "kanban" ? "default" : "ghost"}
-              size="sm"
-              className="h-8 px-3 gap-1.5"
-              onClick={() => setViewMode("kanban")}
-            >
-              <LayoutGrid className="h-4 w-4" /> Kanban
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              className="h-8 px-3 gap-1.5"
-              onClick={() => setViewMode("list")}
-            >
-              <LayoutList className="h-4 w-4" /> Lista
-            </Button>
-          </div>
         </div>
 
         <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
@@ -436,7 +368,7 @@ function VendasPage() {
           <EmptyState
             icon={ShoppingCart}
             title="Nenhuma venda registrada"
-            description="Clique em Nova venda para registrar uma venda no Kanban."
+            description="Clique em Nova venda para registrar uma venda."
             action={
               <Button size="lg" onClick={() => setNovaOpen(true)}>
                 <Plus className="h-5 w-5" /> Nova venda
@@ -444,63 +376,7 @@ function VendasPage() {
             }
           />
         ) : (
-          <>
-            {viewMode === "kanban" && (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {VENDA_STATUS_ORDER.map((status) => {
-              const itens = vendasVisao.filter((v) => getVendaEffectiveStatus(v) === status);
-              const Icon = VENDA_STATUS_ICONS[status];
-              return (
-                <div
-                  key={status}
-                  className="flex flex-col rounded-xl border bg-secondary/40 p-3"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, status)}
-                >
-                  <header className="mb-3 flex items-center justify-between px-1">
-                    <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      <Icon className="h-4 w-4 shrink-0 text-primary" />
-                      <span>{VENDA_STATUS_LABEL[status]}</span>
-                    </h2>
-                    <span className="rounded-full bg-card px-2 py-0.5 text-xs font-medium">
-                      {itens.length}
-                    </span>
-                  </header>
-                  <div className="flex flex-col gap-2">
-                    {itens.length === 0 && (
-                      <p className="rounded-lg border border-dashed bg-card/60 px-3 py-4 text-center text-xs text-muted-foreground">
-                        Vazio
-                      </p>
-                    )}
-                    {itens.map((v) => (
-                      <VendaCard
-                        key={v.id}
-                        venda={v}
-                        onAdvance={() => {
-                          if (hasPendingVendaData(v)) {
-                            toast.error(
-                              "Esta venda possui informações pendentes na etapa atual (em vermelho). Clique na venda e preencha as informações antes de avançar.",
-                            );
-                            return;
-                          }
-                          const curStatus = getVendaEffectiveStatus(v);
-                          const idx = VENDA_STATUS_ORDER.indexOf(curStatus);
-                          const next = VENDA_STATUS_ORDER[idx + 1];
-                          if (next) moveMut.mutate({ id: v.id, status: next });
-                        }}
-                        onEdit={() => setEditVenda(v)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-            )}
-            {viewMode === "list" && (
-              <VendaListView vendas={vendasVisao} onEdit={setEditVenda} />
-            )}
-          </>
+          <VendaListView vendas={vendasVisao} onEdit={setEditVenda} />
         )}
       </div>
 
@@ -693,6 +569,8 @@ function SectionHeader({ label, locked }: { label: string; locked?: boolean }) {
   );
 }
 
+
+
 function NovaVendaDialog({
   open,
   onOpenChange,
@@ -765,7 +643,7 @@ function NovaVendaDialog({
           ? Number(parsed.vl_liquido)
           : liquidoAuto;
       const premioLiq = premioLiquidoAuto;
-      await mockDb.createVenda({
+      await apiClient.post("/api/vendas", {
         fazenda_id: fazendaId,
         status: computedStatus,
         cliente: parsed.cliente,
@@ -1145,7 +1023,7 @@ function NovaVendaDialog({
   );
 }
 
-function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: () => void }) {
+export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: () => void }) {
   const qc = useQueryClient();
   const currentStatus = getVendaEffectiveStatus(venda);
   const [form, setForm] = useState({
@@ -1192,7 +1070,7 @@ function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: () => vo
           ? Number(parsed.vl_liquido)
           : liquidoAuto;
       const premioLiq = premioLiquidoAuto;
-      await mockDb.updateVenda(venda.id, {
+      await apiClient.put(`/api/vendas/${venda.id}`, {
         status: calculateVendaStatus(parsed),
         cliente: parsed.cliente,
         numero_lote_cooperativa: parsed.numero_lote_cooperativa || null,
@@ -1235,7 +1113,7 @@ function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: () => vo
 
   const delMut = useMutation({
     mutationFn: async () => {
-      await mockDb.deleteVenda(venda.id);
+      await apiClient.delete(`/api/vendas/${venda.id}`);
     },
     onSuccess: () => {
       toast.success("Venda excluída");
@@ -1521,7 +1399,7 @@ function RelatorioVendasDialog({
     }
     setGerando(true);
     try {
-      let rows = await mockDb.getVendas(fazendaId);
+      let rows = await apiClient.get<Venda[]>(`/api/fazendas/${fazendaId}/vendas`);
 
       if (inicio) rows = rows.filter((r) => (r.data_venda || "") >= inicio);
       if (fim) rows = rows.filter((r) => (r.data_venda || "") <= fim);
@@ -1733,3 +1611,4 @@ function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda)
     </div>
   );
 }
+

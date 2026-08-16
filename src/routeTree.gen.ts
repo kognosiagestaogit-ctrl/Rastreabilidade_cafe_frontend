@@ -16,6 +16,7 @@ import { Route as LotesRouteImport } from './routes/lotes'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as FazendasRouteImport } from './routes/fazendas'
+import { Route as AmostrasRouteImport } from './routes/amostras'
 import { Route as IndexRouteImport } from './routes/index'
 
 const VendasRoute = VendasRouteImport.update({
@@ -53,6 +54,11 @@ const FazendasRoute = FazendasRouteImport.update({
   path: '/fazendas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AmostrasRoute = AmostrasRouteImport.update({
+  id: '/amostras',
+  path: '/amostras',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -61,6 +67,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/amostras': typeof AmostrasRoute
   '/fazendas': typeof FazendasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/amostras': typeof AmostrasRoute
   '/fazendas': typeof FazendasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/amostras': typeof AmostrasRoute
   '/fazendas': typeof FazendasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/amostras'
     | '/fazendas'
     | '/financeiro'
     | '/login'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/amostras'
     | '/fazendas'
     | '/financeiro'
     | '/login'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/amostras'
     | '/fazendas'
     | '/financeiro'
     | '/login'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AmostrasRoute: typeof AmostrasRoute
   FazendasRoute: typeof FazendasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FazendasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/amostras': {
+      id: '/amostras'
+      path: '/amostras'
+      fullPath: '/amostras'
+      preLoaderRoute: typeof AmostrasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AmostrasRoute: AmostrasRoute,
   FazendasRoute: FazendasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,

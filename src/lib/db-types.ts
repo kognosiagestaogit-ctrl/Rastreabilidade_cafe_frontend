@@ -64,6 +64,24 @@ export type Venda = {
   status?: string | null;
 };
 
+export type Amostra = {
+  id: string;
+  fazenda_id: string;
+  codigo_amostra: string;
+  total_sacas: number;
+  descontos: number;
+  observacoes: string | null;
+  a_receber_previsto: number | null;
+  valor_recebido: number | null;
+  data_recebimento: string | null;
+  conta_corrente: string | null;
+  is_ds: number;
+  premio_rainforest: number;
+  anuncio_venda: string | null;
+  v_funrural: number;
+  vendas?: Venda[];
+};
+
 export type Talhao = {
   id: string;
   fazenda_id: string;
