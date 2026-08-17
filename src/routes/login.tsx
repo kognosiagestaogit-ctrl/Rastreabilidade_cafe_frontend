@@ -21,6 +21,7 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -30,6 +31,7 @@ function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
     if (!email.trim()) {
       toast.error("Informe seu e-mail.");
       return;
@@ -45,7 +47,21 @@ function LoginPage() {
       toast.success("Login realizado com sucesso! Bem-vindo.");
       navigate({ to: "/" });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao efetuar login.");
+      let errorMsg = "E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.";
+      
+      // Tratamento para API offline/indisponível
+      if (
+        err.message && 
+        (err.message.includes("Failed to fetch") || 
+         err.message.includes("NetworkError") || 
+         err.message.includes("Network request failed") ||
+         err.message.includes("Servidor indisponível"))
+      ) {
+        errorMsg = "Servidor indisponível no momento. Verifique sua conexão ou tente novamente mais tarde.";
+      }
+      
+      setLoginError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -91,6 +107,11 @@ function LoginPage() {
         {/* Glassmorphism Card */}
         <div className="rounded-2xl border bg-card/80 p-6 shadow-xl backdrop-blur-md sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {loginError && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive border border-destructive/20">
+                {loginError}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
                 E-mail de acesso
@@ -169,27 +190,6 @@ function LoginPage() {
               )}
             </Button>
           </form>
-
-          <div className="relative my-6 text-center text-xs">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <span className="relative bg-card px-2 text-muted-foreground uppercase tracking-wider">
-              Acesso rápido
-            </span>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={handleDemoLogin}
-            disabled={isSubmitting}
-            className="h-11 w-full gap-2 border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-          >
-            <Sparkles className="h-4 w-4 text-amber-500" />
-            Entrar como Gestor Demo
-          </Button>
         </div>
 
         {/* Footer info */}
