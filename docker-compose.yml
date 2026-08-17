@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # Serviço para desenvolvimento local (com hot-reload)
+  dev:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: bun run dev --host 0.0.0.0
+
+  # Serviço para testar a versão de produção gerada no build
+  prod:
+    build:
+      context: .
+      target: runner
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
