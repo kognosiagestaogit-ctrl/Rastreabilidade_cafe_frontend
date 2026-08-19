@@ -664,7 +664,12 @@ function NovoLoteDialog({
 
   const verificarVendasMut = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post<any>("/api/integracoes/1/sync/detalhes", {
+      const creds = await apiClient.get<any[]>(`/api/fazendas/${fazendaId}/integracoes`);
+      const minasul = creds.find((c) => c.provider === "minasul");
+      if (!minasul) {
+        throw new Error("Credenciais da Minasul não configuradas para esta fazenda.");
+      }
+      const res = await apiClient.post<any>(`/api/integracoes/${minasul.id}/sync/detalhes`, {
         salesId: form.amostra,
         coopBatchId: form.numero_lote_cooperativa,
       });
@@ -1059,7 +1064,7 @@ function NovoLoteDialog({
           <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button size="lg" onClick={() => mut.mutate()} disabled={mut.isPending}>
+          <Button size="lg" onClick={() => mut.mutate()} disabled={mut.isPending || !isColheitaPreenchida}>
             {mut.isPending ? "Salvando..." : "Salvar lote"}
           </Button>
         </DialogFooter>
@@ -1096,7 +1101,12 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
 
   const verificarVendasMut = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post<any>("/api/integracoes/1/sync/detalhes", {
+      const creds = await apiClient.get<any[]>(`/api/fazendas/${fazendaId}/integracoes`);
+      const minasul = creds.find((c) => c.provider === "minasul");
+      if (!minasul) {
+        throw new Error("Credenciais da Minasul não configuradas para esta fazenda.");
+      }
+      const res = await apiClient.post<any>(`/api/integracoes/${minasul.id}/sync/detalhes`, {
         salesId: form.amostra,
         coopBatchId: form.numero_lote_cooperativa,
       });
@@ -1516,7 +1526,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
             <Button variant="outline" size="lg" onClick={onClose}>
               Fechar
             </Button>
-            <Button size="lg" onClick={() => mut.mutate()} disabled={mut.isPending}>
+            <Button size="lg" onClick={() => mut.mutate()} disabled={mut.isPending || !isColheitaPreenchida}>
               Salvar
             </Button>
           </div>

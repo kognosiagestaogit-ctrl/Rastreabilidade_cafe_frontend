@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
+import { useFazendas } from "@/lib/fazenda-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ export function ConfigDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { fazendaAtual } = useFazendas();
   const [existing, setExisting] = useState<IntegracaoCredencial | null>(null);
   const [loadingFetch, setLoadingFetch] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,10 +46,10 @@ export function ConfigDialog({
 
   // Busca integração existente ao abrir o modal
   useEffect(() => {
-    if (!open) return;
+    if (!open || !fazendaAtual?.id) return;
     setLoadingFetch(true);
     apiClient
-      .get<IntegracaoCredencial[]>("/api/integracoes")
+      .get<IntegracaoCredencial[]>(`/api/fazendas/${fazendaAtual.id}/integracoes`)
       .then((list) => {
         const minasul = list.find((i) => i.provider === "minasul") ?? null;
         setExisting(minasul);
@@ -64,7 +66,7 @@ export function ConfigDialog({
         toast.error("Não foi possível carregar as configurações.");
       })
       .finally(() => setLoadingFetch(false));
-  }, [open]);
+  }, [open, fazendaAtual?.id]);
 
   const handleSave = async () => {
     if (!login.trim()) {
@@ -89,8 +91,12 @@ export function ConfigDialog({
         await apiClient.put(`/api/integracoes/${existing.id}`, body);
         toast.success("Credenciais da Minasul atualizadas!");
       } else {
+        if (!fazendaAtual?.id) {
+          toast.error("Nenhuma fazenda selecionada.");
+          return;
+        }
         // Criar nova
-        await apiClient.post("/api/integracoes", {
+        await apiClient.post(`/api/fazendas/${fazendaAtual.id}/integracoes`, {
           provider: "minasul",
           username: login.trim(),
           password: senha.trim(),
@@ -99,9 +105,11 @@ export function ConfigDialog({
       }
 
       // Recarrega para refletir o estado novo
-      const list = await apiClient.get<IntegracaoCredencial[]>("/api/integracoes");
-      const minasul = list.find((i) => i.provider === "minasul") ?? null;
-      setExisting(minasul);
+      if (fazendaAtual?.id) {
+        const list = await apiClient.get<IntegracaoCredencial[]>(`/api/fazendas/${fazendaAtual.id}/integracoes`);
+        const minasul = list.find((i) => i.provider === "minasul") ?? null;
+        setExisting(minasul);
+      }
       setSenha(""); // limpa campo de senha após salvar
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao salvar credenciais.");
