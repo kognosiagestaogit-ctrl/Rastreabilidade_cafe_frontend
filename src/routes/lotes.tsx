@@ -661,7 +661,8 @@ function NovoLoteDialog({
   const talhoes = talhoesQ.data ?? [];
 
 
-  const isColheitaPreenchida = form.numero_lote_fazenda.trim().length > 0;
+  const isColheitaPreenchida =
+    form.numero_lote_fazenda.trim().length > 0 && form.lote_colheita.trim().length > 0;
 
   const canFillTerreiro = isColheitaPreenchida;
   const isTerreiroPreenchido =
@@ -780,7 +781,7 @@ function NovoLoteDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label>Lote colheita (lotinho)</Label>
+              <Label>Lote colheita (lotinho) *</Label>
               <Input
                 className="h-12 text-base"
                 value={form.lote_colheita}
@@ -1130,7 +1131,8 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
 
-  const isColheitaPreenchida = form.numero_lote_fazenda.trim().length > 0;
+  const isColheitaPreenchida =
+    form.numero_lote_fazenda.trim().length > 0 && form.lote_colheita.trim().length > 0;
   const canFillTerreiro = isColheitaPreenchida;
   const isTerreiroPreenchido =
     canFillTerreiro && (!!form.data_entrada_terreiro || !!form.data_saida_terreiro);
@@ -1179,7 +1181,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
               />
             </div>
             <div className="grid gap-2">
-              <Label>Lote colheita (lotinho)</Label>
+              <Label>Lote colheita (lotinho) *</Label>
               <Input
                 className="h-12 text-base"
                 value={form.lote_colheita}
