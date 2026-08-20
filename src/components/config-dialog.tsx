@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Settings, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Search, ShoppingBag, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -43,6 +43,36 @@ export function ConfigDialog({
   const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
+
+  const [buscarLoading, setBuscarLoading] = useState(false);
+  const [buscarResult, setBuscarResult] = useState<{ vendas: number; amostras: number } | null>(null);
+  const [buscarMes, setBuscarMes] = useState("");
+  const [buscarAno, setBuscarAno] = useState(new Date().getFullYear().toString());
+
+  const handleBuscar = async () => {
+    if (!buscarMes || !buscarAno) {
+      toast.error("Informe mês e ano.");
+      return;
+    }
+    if (!existing) {
+      toast.error("Integração não encontrada.");
+      return;
+    }
+
+    setBuscarLoading(true);
+    setBuscarResult(null);
+    try {
+      const data = await apiClient.get<{ vendas: number; amostras: number }>(
+        `/api/integracoes/${existing.id}/buscar-registros?mes=${buscarMes}&ano=${buscarAno}`
+      );
+      setBuscarResult(data);
+      toast.success("Busca concluída com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao buscar registros na Minasul.");
+    } finally {
+      setBuscarLoading(false);
+    }
+  };
 
   // Busca integração existente ao abrir o modal
   useEffect(() => {
@@ -237,6 +267,67 @@ export function ConfigDialog({
               </Button>
             </div>
           </div>
+
+          {isEditing && (
+            <div className="rounded-lg border bg-secondary/30 p-4">
+              <div className="mb-4">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Search className="h-4 w-4 text-primary" />
+                  Buscar registros por período (Minasul)
+                </h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Busque vendas e amostras geradas em um mês e ano específicos.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <div className="grid gap-1.5 flex-1">
+                  <Label htmlFor="buscar-mes" className="text-xs">Mês</Label>
+                  <Input
+                    id="buscar-mes"
+                    placeholder="Ex: 05"
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={buscarMes}
+                    onChange={(e) => setBuscarMes(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-1.5 flex-1">
+                  <Label htmlFor="buscar-ano" className="text-xs">Ano</Label>
+                  <Input
+                    id="buscar-ano"
+                    placeholder="Ex: 2024"
+                    type="number"
+                    min="2000"
+                    value={buscarAno}
+                    onChange={(e) => setBuscarAno(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-1.5 self-end">
+                  <Button onClick={handleBuscar} disabled={buscarLoading} className="gap-2 shrink-0">
+                    {buscarLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    Buscar
+                  </Button>
+                </div>
+              </div>
+
+              {buscarResult && (
+                <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border/50">
+                  <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
+                    <ShoppingBag className="h-5 w-5 text-emerald-500 mb-1" />
+                    <span className="text-2xl font-bold">{buscarResult.vendas}</span>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Vendas</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
+                    <FlaskConical className="h-5 w-5 text-blue-500 mb-1" />
+                    <span className="text-2xl font-bold">{buscarResult.amostras}</span>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amostras</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
