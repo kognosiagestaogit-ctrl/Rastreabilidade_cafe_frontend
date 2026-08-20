@@ -49,6 +49,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useFazendas } from "@/lib/fazenda-context";
 import { mockDb } from "@/lib/mock-db";
 import { STATUS_ORDER, STATUS_LABEL, dt, num, type LoteStatus } from "@/lib/format";
@@ -136,6 +146,7 @@ function LotesPage() {
   const [buscaApplied, setBuscaApplied] = useState("");
   const [safraApplied, setSafraApplied] = useState<string>("TODAS");
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [pendingMove, setPendingMove] = useState<{ id: string; payload: any } | null>(null);
 
   const handleApplyFilters = () => {
     setBuscaApplied(buscaDraft);
@@ -160,8 +171,9 @@ function LotesPage() {
   });
 
   const moveMut = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: LoteStatus }) => {
-      await mockDb.updateLote(id, { status });
+    mutationFn: async (data: { id: string; [key: string]: any }) => {
+      const { id, ...rest } = data;
+      await mockDb.updateLote(id, rest);
     },
     onSuccess: () => {
       toast.success("Lote atualizado");
@@ -197,17 +209,36 @@ function LotesPage() {
       }
     }
 
+    const payload: any = { status: newStatus };
+
     if (newIndex < currentIndex) {
-      if (
-        !window.confirm(
-          "Você está voltando este lote para uma etapa anterior. Dados das etapas seguintes poderão ser considerados inválidos ou perder o sentido. Confirma o retorno?",
-        )
-      ) {
-        return;
+      if (newIndex < 5) {
+        payload.data_envio_cooperativa = null;
+        payload.numero_lote_cooperativa = null;
+        payload.nf_remessa_cooperativa = null;
+        payload.amostra = null;
       }
+      if (newIndex < 4) {
+        payload.data_beneficio = null;
+      }
+      if (newIndex < 3) {
+        payload.numero_tulha = null;
+      }
+      if (newIndex < 2) {
+        payload.data_entrada_secador = null;
+        payload.data_saida_secador = null;
+        payload.umidade = null;
+      }
+      if (newIndex < 1) {
+        payload.data_entrada_terreiro = null;
+        payload.data_saida_terreiro = null;
+      }
+
+      setPendingMove({ id: lote.id, payload });
+      return;
     }
 
-    moveMut.mutate({ id: lote.id, status: newStatus });
+    moveMut.mutate({ id: lote.id, ...payload });
   };
 
   if (fazendas.length === 0) {
@@ -384,6 +415,31 @@ function LotesPage() {
         )}
       </div>
       {editLote && <EditarLoteDialog lote={editLote} onClose={() => setEditLote(null)} />}
+      
+      <AlertDialog open={!!pendingMove} onOpenChange={(open) => !open && setPendingMove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja voltar o lote?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está movendo este lote para uma etapa anterior. Os dados preenchidos nas etapas que ficarão para frente serão <strong className="text-destructive">apagados definitivamente</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingMove) {
+                  moveMut.mutate({ id: pendingMove.id, ...pendingMove.payload });
+                  setPendingMove(null);
+                }
+              }}
+            >
+              Sim, apagar os dados avançados
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
