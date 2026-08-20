@@ -21,6 +21,8 @@ import {
   Building2,
   Filter,
   RotateCcw,
+  DollarSign,
+  FlaskConical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -105,7 +107,7 @@ export function calculateLoteStatus(form: {
   if (
     form.data_entrada_secador ||
     form.data_saida_secador ||
-    (form.umidade !== "" && form.umidade !== null)
+    (form.umidade !== "" && form.umidade != null)
   ) {
     return "NO_SECADOR";
   }
@@ -113,6 +115,13 @@ export function calculateLoteStatus(form: {
     return "NO_TERREIRO";
   }
   return "EM_COLHEITA";
+}
+
+export function getLoteEffectiveStatus(lote: Lote): LoteStatus {
+  if (lote.status && STATUS_ORDER.includes(lote.status as LoteStatus)) {
+    return lote.status as LoteStatus;
+  }
+  return calculateLoteStatus(lote);
 }
 
 export function hasPendingData(lote: Lote): boolean {
@@ -146,7 +155,6 @@ function LotesPage() {
   const [buscaApplied, setBuscaApplied] = useState("");
   const [safraApplied, setSafraApplied] = useState<string>("TODAS");
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
-  const [pendingMove, setPendingMove] = useState<{ id: string; payload: any } | null>(null);
 
   const handleApplyFilters = () => {
     setBuscaApplied(buscaDraft);
@@ -191,54 +199,7 @@ function LotesPage() {
     if (!lote) return;
     if (lote.status === newStatus) return;
 
-    const currentIndex = STATUS_ORDER.indexOf(lote.status);
-    const newIndex = STATUS_ORDER.indexOf(newStatus);
-
-    if (newIndex > currentIndex) {
-      if (newIndex > currentIndex + 1) {
-        toast.error(
-          "O lote só pode ser avançado para a etapa imediatamente seguinte (uma de cada vez).",
-        );
-        return;
-      }
-      if (hasPendingData(lote)) {
-        toast.error(
-          "Este lote possui informações pendentes na etapa atual (em vermelho). Clique no lote e preencha as informações antes de avançar.",
-        );
-        return;
-      }
-    }
-
-    const payload: any = { status: newStatus };
-
-    if (newIndex < currentIndex) {
-      if (newIndex < 5) {
-        payload.data_envio_cooperativa = null;
-        payload.numero_lote_cooperativa = null;
-        payload.nf_remessa_cooperativa = null;
-        payload.amostra = null;
-      }
-      if (newIndex < 4) {
-        payload.data_beneficio = null;
-      }
-      if (newIndex < 3) {
-        payload.numero_tulha = null;
-      }
-      if (newIndex < 2) {
-        payload.data_entrada_secador = null;
-        payload.data_saida_secador = null;
-        payload.umidade = null;
-      }
-      if (newIndex < 1) {
-        payload.data_entrada_terreiro = null;
-        payload.data_saida_terreiro = null;
-      }
-
-      setPendingMove({ id: lote.id, payload });
-      return;
-    }
-
-    moveMut.mutate({ id: lote.id, ...payload });
+    moveMut.mutate({ id: lote.id, status: newStatus });
   };
 
   if (fazendas.length === 0) {
@@ -357,7 +318,7 @@ function LotesPage() {
             {viewMode === 'kanban' && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                 {STATUS_ORDER.map((status) => {
-                  const itens = lotesFiltrados.filter((l) => l.status === status);
+                  const itens = lotesFiltrados.filter((l) => getLoteEffectiveStatus(l) === status);
                   const Icon = STATUS_ICONS[status];
                   return (
                     <div
@@ -392,7 +353,8 @@ function LotesPage() {
                                 );
                                 return;
                               }
-                              const idx = STATUS_ORDER.indexOf(l.status);
+                              const effectiveStatus = getLoteEffectiveStatus(l);
+                              const idx = STATUS_ORDER.indexOf(effectiveStatus);
                               const next = STATUS_ORDER[idx + 1];
                               if (next) moveMut.mutate({ id: l.id, status: next });
                             }}
@@ -415,31 +377,6 @@ function LotesPage() {
         )}
       </div>
       {editLote && <EditarLoteDialog lote={editLote} onClose={() => setEditLote(null)} />}
-      
-      <AlertDialog open={!!pendingMove} onOpenChange={(open) => !open && setPendingMove(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza que deseja voltar o lote?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está movendo este lote para uma etapa anterior. Os dados preenchidos nas etapas que ficarão para frente serão <strong className="text-destructive">apagados definitivamente</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (pendingMove) {
-                  moveMut.mutate({ id: pendingMove.id, ...pendingMove.payload });
-                  setPendingMove(null);
-                }
-              }}
-            >
-              Sim, apagar os dados avançados
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
@@ -457,7 +394,8 @@ function LoteCard({
 
   const umidadeForaIdeal =
     lote.umidade != null && (Number(lote.umidade) < 10.5 || Number(lote.umidade) > 12);
-  const isLast = lote.status === "ENVIADO_COOPERATIVA";
+  const effectiveStatus = getLoteEffectiveStatus(lote);
+  const isLast = effectiveStatus === "ENVIADO_COOPERATIVA";
 
   return (
     <div
@@ -469,6 +407,17 @@ function LoteCard({
         <div className="flex items-center justify-between gap-2 border-b pb-2 mb-2">
           <span className="font-semibold text-foreground">Lote #{lote.numero_lote_fazenda}</span>
           <div className="flex items-center gap-1">
+            {lote.quantidade_vendas ? (
+              <span title={`${lote.quantidade_vendas} Venda(s) vinculada(s)`} className="flex h-5 items-center gap-0.5 rounded bg-green-100 px-1.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <DollarSign className="h-3 w-3" />
+                {lote.quantidade_vendas}
+              </span>
+            ) : null}
+            {lote.amostra && (
+              <span title={`Amostra vinculada: ${lote.amostra}`} className="flex h-5 items-center gap-0.5 rounded bg-blue-100 px-1.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                <FlaskConical className="h-3 w-3" />
+              </span>
+            )}
             {hasPending && (
               <span title="Faltam informações para esta etapa">
                 <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -478,7 +427,7 @@ function LoteCard({
         </div>
         
         <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
-          {lote.status === "EM_COLHEITA" && (
+          {effectiveStatus === "EM_COLHEITA" && (
             <>
               <div className="flex justify-between">
                 <span>Safra:</span>
@@ -517,7 +466,7 @@ function LoteCard({
             </>
           )}
 
-          {lote.status === "NO_TERREIRO" && (
+          {effectiveStatus === "NO_TERREIRO" && (
             <>
               <div className="flex justify-between">
                 <span>Data Entrada:</span>
@@ -532,7 +481,7 @@ function LoteCard({
             </>
           )}
 
-          {lote.status === "NO_SECADOR" && (
+          {effectiveStatus === "NO_SECADOR" && (
             <>
               <div className="flex justify-between">
                 <span>Data Entrada:</span>
@@ -553,7 +502,7 @@ function LoteCard({
             </>
           )}
 
-          {lote.status === "NA_TULHA" && (
+          {effectiveStatus === "NA_TULHA" && (
             <>
               <div className="flex justify-between">
                 <span>Nº Tulha:</span>
@@ -564,7 +513,7 @@ function LoteCard({
             </>
           )}
 
-          {lote.status === "BENEFICIADO" && (
+          {effectiveStatus === "BENEFICIADO" && (
             <>
               <div className="flex justify-between">
                 <span>Data Benefício:</span>
@@ -575,7 +524,7 @@ function LoteCard({
             </>
           )}
 
-          {lote.status === "ENVIADO_COOPERATIVA" && (
+          {effectiveStatus === "ENVIADO_COOPERATIVA" && (
             <>
               <div className="flex justify-between">
                 <span>Data Envio Coop.:</span>
@@ -631,7 +580,8 @@ function LoteListView({
         <tbody>
           {lotes.map((lote, i) => {
             const hasPending = hasPendingData(lote);
-            const Icon = STATUS_ICONS[lote.status];
+            const effectiveStatus = getLoteEffectiveStatus(lote);
+            const Icon = STATUS_ICONS[effectiveStatus];
             return (
               <tr
                 key={lote.id}
@@ -641,10 +591,25 @@ function LoteListView({
                 } ${hasPending ? 'text-destructive' : ''}`}
               >
                 <td className="px-4 py-3 font-semibold">
-                  <span className="flex items-center gap-2">
-                    {hasPending && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
-                    #{lote.numero_lote_fazenda}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1">
+                      {hasPending && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                      #{lote.numero_lote_fazenda}
+                    </span>
+                    <div className="flex items-center gap-1 ml-2">
+                      {lote.quantidade_vendas ? (
+                        <span title={`${lote.quantidade_vendas} Venda(s) vinculada(s)`} className="flex h-5 items-center gap-0.5 rounded bg-green-100 px-1.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          <DollarSign className="h-3 w-3" />
+                          {lote.quantidade_vendas}
+                        </span>
+                      ) : null}
+                      {lote.amostra && (
+                        <span title={`Amostra vinculada: ${lote.amostra}`} className="flex h-5 items-center gap-0.5 rounded bg-blue-100 px-1.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                          <FlaskConical className="h-3 w-3" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{lote.lote_colheita || '-'}</td>
                 <td className="px-4 py-3">{lote.safra || '-'}</td>
@@ -652,7 +617,7 @@ function LoteListView({
                 <td className="px-4 py-3">
                   <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium w-fit">
                     <Icon className="h-3 w-3 shrink-0" />
-                    {STATUS_LABEL[lote.status]}
+                    {STATUS_LABEL[effectiveStatus]}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
@@ -1088,15 +1053,10 @@ function NovoLoteDialog({
   );
 }
 
-function SectionHeader({ label, locked }: { label: string; locked?: boolean }) {
+function SectionHeader({ label }: { label: string }) {
   return (
     <div className="mt-3 flex items-center justify-between border-b pb-1 text-xs font-semibold uppercase tracking-wide">
-      <span className={locked ? "text-muted-foreground/40" : "text-muted-foreground"}>{label}</span>
-      {locked && (
-        <span className="flex items-center gap-1 font-normal text-muted-foreground/60 lowercase italic text-[11px]">
-          <Lock className="h-3 w-3" /> preencha a etapa anterior
-        </span>
-      )}
+      <span className="text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -1152,18 +1112,18 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
         colheita_tipo: form.colheita_tipo,
         data_colheita_inicio: form.data_colheita_inicio || null,
         data_colheita_fim: form.data_colheita_fim || null,
-        data_entrada_terreiro: canFillTerreiro ? form.data_entrada_terreiro || null : null,
-        data_saida_terreiro: canFillTerreiro ? form.data_saida_terreiro || null : null,
-        data_entrada_secador: canFillSecador ? form.data_entrada_secador || null : null,
-        data_saida_secador: canFillSecador ? form.data_saida_secador || null : null,
-        umidade: canFillSecador && form.umidade ? Number(form.umidade) : null,
-        numero_tulha: canFillBeneficio ? form.numero_tulha || null : null,
-        data_beneficio: canFillBeneficio ? form.data_beneficio || null : null,
-        data_envio_cooperativa: canFillCooperativa ? form.data_envio_cooperativa || null : null,
+        data_entrada_terreiro: form.data_entrada_terreiro || null,
+        data_saida_terreiro: form.data_saida_terreiro || null,
+        data_entrada_secador: form.data_entrada_secador || null,
+        data_saida_secador: form.data_saida_secador || null,
+        umidade: form.umidade ? Number(form.umidade) : null,
+        numero_tulha: form.numero_tulha || null,
+        data_beneficio: form.data_beneficio || null,
+        data_envio_cooperativa: form.data_envio_cooperativa || null,
         numero_sacas: form.numero_sacas ? Number(form.numero_sacas) : null,
-        numero_lote_cooperativa: canFillCooperativa ? form.numero_lote_cooperativa || null : null,
-        nf_remessa_cooperativa: canFillCooperativa ? form.nf_remessa_cooperativa || null : null,
-        amostra: canFillCooperativa ? form.amostra || null : null,
+        numero_lote_cooperativa: form.numero_lote_cooperativa || null,
+        nf_remessa_cooperativa: form.nf_remessa_cooperativa || null,
+        amostra: form.amostra || null,
         observacoes: form.observacoes || null,
       });
     },
@@ -1189,18 +1149,6 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
 
   const isColheitaPreenchida =
     form.numero_lote_fazenda.trim().length > 0 && form.lote_colheita.trim().length > 0;
-  const canFillTerreiro = isColheitaPreenchida;
-  const isTerreiroPreenchido =
-    canFillTerreiro && (!!form.data_entrada_terreiro || !!form.data_saida_terreiro);
-  const canFillSecador = isTerreiroPreenchido;
-  const isSecadorPreenchido =
-    canFillSecador &&
-    (!!form.data_entrada_secador ||
-      !!form.data_saida_secador ||
-      (form.umidade !== "" && form.umidade !== null));
-  const canFillBeneficio = isSecadorPreenchido;
-  const isBeneficioPreenchido = canFillBeneficio && (!!form.numero_tulha || !!form.data_beneficio);
-  const canFillCooperativa = isBeneficioPreenchido;
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -1208,7 +1156,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
         <DialogHeader>
           <DialogTitle>Lote #{lote.numero_lote_fazenda}</DialogTitle>
           <DialogDescription>
-            Atualize os dados e a etapa será recalculada automaticamente. As etapas seguintes são liberadas conforme você preenche a etapa atual.
+            Atualize os dados e a etapa será recalculada automaticamente com base nos campos preenchidos.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-5 py-2">
@@ -1355,7 +1303,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
             </div>
           )}
 
-          <SectionHeader label="Terreiro" locked={!canFillTerreiro} />
+          <SectionHeader label="Terreiro" />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label className={!canFillTerreiro ? "opacity-50" : ""}>Data entrada</Label>
@@ -1379,34 +1327,31 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
             </div>
           </div>
 
-          <SectionHeader label="Secador" locked={!canFillSecador} />
+          <SectionHeader label="Secador" />
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-2">
-              <Label className={!canFillSecador ? "opacity-50" : ""}>Data entrada</Label>
+              <Label>Data entrada</Label>
               <Input
                 type="date"
-                disabled={!canFillSecador}
                 className="h-12 text-base"
                 value={form.data_entrada_secador}
                 onChange={(e) => setForm({ ...form, data_entrada_secador: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
-              <Label className={!canFillSecador ? "opacity-50" : ""}>Data saída</Label>
+              <Label>Data saída</Label>
               <Input
                 type="date"
-                disabled={!canFillSecador}
                 className="h-12 text-base"
                 value={form.data_saida_secador}
                 onChange={(e) => setForm({ ...form, data_saida_secador: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
-              <Label className={!canFillSecador ? "opacity-50" : ""}>Umidade (%)</Label>
+              <Label>Umidade (%)</Label>
               <Input
                 type="number"
                 step="0.1"
-                disabled={!canFillSecador}
                 className="h-12 text-base"
                 value={form.umidade}
                 onChange={(e) => setForm({ ...form, umidade: e.target.value })}
@@ -1414,22 +1359,20 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
             </div>
           </div>
 
-          <SectionHeader label="Benefício" locked={!canFillBeneficio} />
+          <SectionHeader label="Benefício" />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label className={!canFillBeneficio ? "opacity-50" : ""}>Nº Tulha</Label>
+              <Label>Nº Tulha</Label>
               <Input
-                disabled={!canFillBeneficio}
                 className="h-12 text-base"
                 value={form.numero_tulha}
                 onChange={(e) => setForm({ ...form, numero_tulha: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
-              <Label className={!canFillBeneficio ? "opacity-50" : ""}>Data benefício</Label>
+              <Label>Data benefício</Label>
               <Input
                 type="date"
-                disabled={!canFillBeneficio}
                 className="h-12 text-base"
                 value={form.data_beneficio}
                 onChange={(e) => setForm({ ...form, data_beneficio: e.target.value })}
@@ -1437,34 +1380,29 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
             </div>
           </div>
 
-          <SectionHeader label="Depósito Cooperativa" locked={!canFillCooperativa} />
+          <SectionHeader label="Depósito Cooperativa" />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Nº lote cooperativa</Label>
+              <Label>Nº lote cooperativa</Label>
               <Input
-                disabled={!canFillCooperativa}
                 className="h-12 text-base"
                 value={form.numero_lote_cooperativa}
                 onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
               />
             </div>
 
-
-
             <div className="grid gap-2">
-              <Label className={!canFillCooperativa ? "opacity-50" : ""}>Data envio cooperativa</Label>
+              <Label>Data envio cooperativa</Label>
               <Input
                 type="date"
-                disabled={!canFillCooperativa}
                 className="h-12 text-base"
                 value={form.data_envio_cooperativa}
                 onChange={(e) => setForm({ ...form, data_envio_cooperativa: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
-              <Label className={!canFillCooperativa ? "opacity-50" : ""}>NF remessa cooperativa</Label>
+              <Label>NF remessa cooperativa</Label>
               <Input
-                disabled={!canFillCooperativa}
                 className="h-12 text-base"
                 value={form.nf_remessa_cooperativa}
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}

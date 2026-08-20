@@ -26,6 +26,7 @@ export type Lote = {
   nf_remessa_cooperativa: string | null;
   amostra: string | null;
   observacoes: string | null;
+  quantidade_vendas?: number;
 };
 
 export type Venda = {
