@@ -1150,6 +1150,22 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
   const isColheitaPreenchida =
     form.numero_lote_fazenda.trim().length > 0 && form.lote_colheita.trim().length > 0;
 
+  const canFillTerreiro = isColheitaPreenchida;
+  const isTerreiroPreenchido =
+    canFillTerreiro && (!!form.data_entrada_terreiro || !!form.data_saida_terreiro);
+
+  const canFillSecador = isTerreiroPreenchido;
+  const isSecadorPreenchido =
+    canFillSecador &&
+    (!!form.data_entrada_secador ||
+      !!form.data_saida_secador ||
+      (form.umidade !== "" && form.umidade !== null));
+
+  const canFillBeneficio = isSecadorPreenchido;
+  const isBeneficioPreenchido = canFillBeneficio && (!!form.numero_tulha || !!form.data_beneficio);
+
+  const canFillCooperativa = isBeneficioPreenchido;
+
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
