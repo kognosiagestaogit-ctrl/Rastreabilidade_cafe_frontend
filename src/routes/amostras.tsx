@@ -81,8 +81,9 @@ export function AmostrasPage() {
     return amostras.filter((a) => {
       const termo = buscaApplied.trim().toLowerCase();
       if (!termo) return true;
-      return [a.codigo_amostra, a.observacoes].some((c) =>
-        (c ?? "").toLowerCase().includes(termo),
+      const cooperativaLotes = a.vendas?.map(v => v.numero_lote_cooperativa).join(" ") || "";
+      return [a.codigo_amostra, a.anuncio_venda, a.observacoes, cooperativaLotes].some((c) =>
+        String(c ?? "").toLowerCase().includes(termo),
       );
     });
   }, [amostras, buscaApplied]);

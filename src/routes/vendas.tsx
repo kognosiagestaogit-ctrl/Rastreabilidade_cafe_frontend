@@ -229,7 +229,7 @@ export function VendasPage() {
       const termo = buscaApplied.trim().toLowerCase();
       if (!termo) return true;
       return [v.cliente, v.numero_lote_cooperativa, v.nf_venda, v.padrao].some((c) =>
-        (c ?? "").toLowerCase().includes(termo),
+        String(c ?? "").toLowerCase().includes(termo),
       );
     });
   }, [vendas, visaoApplied, buscaApplied]);
@@ -325,7 +325,7 @@ export function VendasPage() {
           <div className="relative min-w-[220px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar cliente, lote, NF..."
+              placeholder="Buscar cliente, lote coop., NF..."
               value={buscaDraft}
               onChange={(e) => setBuscaDraft(e.target.value)}
               onKeyDown={(e) => {

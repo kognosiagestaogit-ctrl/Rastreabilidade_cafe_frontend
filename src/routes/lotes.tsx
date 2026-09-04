@@ -232,7 +232,7 @@ function LotesPage() {
         l.numero_lote_cooperativa,
         l.numero_tulha,
       ];
-      return campos.some((c) => (c ?? "").toLowerCase().includes(termo));
+      return campos.some((c) => String(c ?? "").toLowerCase().includes(termo));
     });
   }, [lotes, buscaApplied, safraApplied]);
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Search, ShoppingBag, FlaskConical, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Settings, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Search, ShoppingBag, FlaskConical, ChevronDown, ChevronUp, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -57,7 +57,10 @@ export function ConfigDialog({
   const [showLogin, setShowLogin] = useState(true);
 
   const [buscarLoading, setBuscarLoading] = useState(false);
+  const [vendasFetched, setVendasFetched] = useState<any[] | null>(null);
+  const [importando, setImportando] = useState(false);
   const [buscarResult, setBuscarResult] = useState<{ vendas: number; amostras: number } | null>(null);
+  
   const [buscarMes, setBuscarMes] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [buscarAno, setBuscarAno] = useState(new Date().getFullYear().toString());
 
@@ -73,16 +76,39 @@ export function ConfigDialog({
 
     setBuscarLoading(true);
     setBuscarResult(null);
+    setVendasFetched(null);
     try {
-      const data = await apiClient.get<{ vendas: number; amostras: number }>(
+      const { data } = await apiClient.get<{ data: any[] }>(
         `/api/integracoes/${existing.id}/buscar-registros?mes=${buscarMes}&ano=${buscarAno}`
       );
-      setBuscarResult(data);
-      toast.success("Busca concluída com sucesso!");
+      setVendasFetched(data || []);
+      if (data && data.length > 0) {
+        toast.success(`${data.length} registros encontrados!`);
+      } else {
+        toast.info("Nenhum registro encontrado neste período.");
+      }
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao buscar registros na Minasul.");
     } finally {
       setBuscarLoading(false);
+    }
+  };
+
+  const handleImportar = async () => {
+    if (!vendasFetched || !existing) return;
+    setImportando(true);
+    try {
+      const res = await apiClient.post<{ resultados: { vendas: number; amostras: number } }>(
+        `/api/integracoes/${existing.id}/salvar-registros`,
+        { vendasResumo: vendasFetched }
+      );
+      setBuscarResult(res.resultados);
+      setVendasFetched(null);
+      toast.success("Registros importados com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao importar registros.");
+    } finally {
+      setImportando(false);
     }
   };
 
@@ -97,7 +123,6 @@ export function ConfigDialog({
         setExisting(minasul);
         if (minasul) {
           setLogin(minasul.username);
-          // Senha nunca vem da API — mostramos placeholder mascarado
           setSenha("");
           setShowLogin(false);
         } else {
@@ -125,7 +150,6 @@ export function ConfigDialog({
     setSaving(true);
     try {
       if (existing) {
-        // Atualizar: só envia senha se foi alterada
         const body: Record<string, string> = {
           provider: "minasul",
           username: login.trim(),
@@ -139,7 +163,6 @@ export function ConfigDialog({
           toast.error("Nenhuma fazenda selecionada.");
           return;
         }
-        // Criar nova
         await apiClient.post(`/api/fazendas/${fazendaAtual.id}/integracoes`, {
           provider: "minasul",
           username: login.trim(),
@@ -148,13 +171,12 @@ export function ConfigDialog({
         toast.success("Credenciais da Minasul salvas!");
       }
 
-      // Recarrega para refletir o estado novo
       if (fazendaAtual?.id) {
         const list = await apiClient.get<IntegracaoCredencial[]>(`/api/fazendas/${fazendaAtual.id}/integracoes`);
         const minasul = list.find((i) => i.provider === "minasul") ?? null;
         setExisting(minasul);
       }
-      setSenha(""); // limpa campo de senha após salvar
+      setSenha("");
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao salvar credenciais.");
     } finally {
@@ -174,6 +196,7 @@ export function ConfigDialog({
       setSenha("");
       setShowLogin(true);
       setBuscarResult(null);
+      setVendasFetched(null);
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao remover credenciais.");
     } finally {
@@ -342,7 +365,7 @@ export function ConfigDialog({
                   Buscar registros por período (Minasul)
                 </h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Busque vendas e amostras geradas em um mês e ano específicos.
+                  Busque vendas e amostras na Minasul e escolha importar.
                 </p>
               </div>
 
@@ -378,17 +401,41 @@ export function ConfigDialog({
                 </div>
               </div>
 
-              {buscarResult && (
-                <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border/50">
-                  <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
-                    <ShoppingBag className="h-5 w-5 text-emerald-500 mb-1" />
-                    <span className="text-2xl font-bold">{buscarResult.vendas}</span>
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Vendas</span>
+              {vendasFetched !== null && vendasFetched.length > 0 && !buscarResult && (
+                <div className="mt-4 pt-4 border-t border-border/50">
+                  <div className="flex items-center justify-between mb-4 bg-primary/10 p-3 rounded-md">
+                    <div>
+                      <h4 className="font-medium text-sm text-primary">Registros encontrados</h4>
+                      <p className="text-xs text-muted-foreground">Foram encontrados {vendasFetched.length} registro(s) neste período.</p>
+                    </div>
+                    <Button onClick={handleImportar} disabled={importando} className="gap-2 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground">
+                      {importando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      Importar Todos
+                    </Button>
                   </div>
-                  <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
-                    <FlaskConical className="h-5 w-5 text-blue-500 mb-1" />
-                    <span className="text-2xl font-bold">{buscarResult.amostras}</span>
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amostras</span>
+                </div>
+              )}
+              
+              {vendasFetched !== null && vendasFetched.length === 0 && (
+                <div className="mt-4 pt-4 border-t border-border/50">
+                   <p className="text-sm text-center text-muted-foreground py-2">Nenhum registro encontrado no período.</p>
+                </div>
+              )}
+
+              {buscarResult && (
+                <div className="mt-4 pt-4 border-t border-border/50">
+                  <h4 className="font-medium text-sm mb-3">Resumo da Importação</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
+                      <ShoppingBag className="h-5 w-5 text-emerald-500 mb-1" />
+                      <span className="text-2xl font-bold">{buscarResult.vendas}</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Vendas Salvas</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
+                      <FlaskConical className="h-5 w-5 text-blue-500 mb-1" />
+                      <span className="text-2xl font-bold">{buscarResult.amostras}</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amostras Salvas</span>
+                    </div>
                   </div>
                 </div>
               )}
