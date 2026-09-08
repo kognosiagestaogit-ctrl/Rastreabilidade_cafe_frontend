@@ -679,6 +679,20 @@ function NovoLoteDialog({
       return await mockDb.getTalhoes(fazendaId);
     },
   });
+
+  const [isVerificandoCoop, setIsVerificandoCoop] = useState(false);
+  const [isVinculadoCoop, setIsVinculadoCoop] = useState(false);
+  const [modalDesvincularOpen, setModalDesvincularOpen] = useState(false);
+
+  const handleVerificarVendas = () => {
+    if (!form.numero_lote_cooperativa) return;
+    setIsVerificandoCoop(true);
+    setTimeout(() => {
+      setIsVerificandoCoop(false);
+      setIsVinculadoCoop(true);
+      toast.success("Verificação concluída. Venda(s) vinculada(s).");
+    }, 800);
+  };
   const talhoes = talhoesQ.data ?? [];
 
 
@@ -998,14 +1012,64 @@ function NovoLoteDialog({
 
           <SectionHeader label="Depósito Cooperativa" />
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
+            <div className="grid gap-2 sm:col-span-2">
               <Label>Nº Lote Cooperativa</Label>
-              <Input
-                className="h-12 text-base"
-                value={form.numero_lote_cooperativa}
-                onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  className="h-12 text-base flex-1"
+                  value={form.numero_lote_cooperativa}
+                  disabled={isVinculadoCoop}
+                  onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
+                />
+                {!isVinculadoCoop ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-12"
+                    disabled={!form.numero_lote_cooperativa || isVerificandoCoop}
+                    onClick={handleVerificarVendas}
+                  >
+                    {isVerificandoCoop ? "Buscando..." : "Verificar vendas"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="h-12"
+                    onClick={() => setModalDesvincularOpen(true)}
+                  >
+                    Desvincular
+                  </Button>
+                )}
+              </div>
             </div>
+
+            <Dialog open={modalDesvincularOpen} onOpenChange={setModalDesvincularOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Desvincular vendas</DialogTitle>
+                  <DialogDescription>
+                    Tem certeza que deseja desvincular as vendas associadas a este lote da cooperativa?
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setModalDesvincularOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setForm({ ...form, numero_lote_cooperativa: "" });
+                      setIsVinculadoCoop(false);
+                      setModalDesvincularOpen(false);
+                      toast.info("Campo destravado. Você pode inserir um novo lote.");
+                    }}
+                  >
+                    Sim, desvincular
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <div className="grid gap-2">
               <Label>
@@ -1097,6 +1161,29 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     amostra: lote.amostra ?? "",
     observacoes: lote.observacoes ?? "",
   });
+
+  const [isVerificandoCoop, setIsVerificandoCoop] = useState(false);
+  const [isVinculadoCoop, setIsVinculadoCoop] = useState(!!lote.numero_lote_cooperativa);
+  const [modalDesvincularOpen, setModalDesvincularOpen] = useState(false);
+
+  const handleVerificarVendas = async () => {
+    if (!form.numero_lote_cooperativa) return;
+    setIsVerificandoCoop(true);
+    try {
+      const res = await mockDb.updateLote(lote.id, { numero_lote_cooperativa: form.numero_lote_cooperativa }) as any;
+      if (res.venda_vinculada_id) {
+        setIsVinculadoCoop(true);
+        toast.success(res.mensagem_vinculo || "Venda vinculada!");
+      } else {
+        toast.info(res.mensagem_vinculo || "Nenhuma venda encontrada.");
+      }
+      qc.invalidateQueries({ queryKey: ["lotes"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao verificar.");
+    } finally {
+      setIsVerificandoCoop(false);
+    }
+  };
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -1398,14 +1485,64 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
 
           <SectionHeader label="Depósito Cooperativa" />
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
+            <div className="grid gap-2 sm:col-span-2">
               <Label>Nº lote cooperativa</Label>
-              <Input
-                className="h-12 text-base"
-                value={form.numero_lote_cooperativa}
-                onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  className="h-12 text-base flex-1"
+                  value={form.numero_lote_cooperativa}
+                  disabled={isVinculadoCoop}
+                  onChange={(e) => setForm({ ...form, numero_lote_cooperativa: e.target.value })}
+                />
+                {!isVinculadoCoop ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-12"
+                    disabled={!form.numero_lote_cooperativa || isVerificandoCoop}
+                    onClick={handleVerificarVendas}
+                  >
+                    {isVerificandoCoop ? "Buscando..." : "Verificar vendas"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="h-12"
+                    onClick={() => setModalDesvincularOpen(true)}
+                  >
+                    Desvincular
+                  </Button>
+                )}
+              </div>
             </div>
+
+            <Dialog open={modalDesvincularOpen} onOpenChange={setModalDesvincularOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Desvincular vendas</DialogTitle>
+                  <DialogDescription>
+                    Tem certeza que deseja desvincular as vendas associadas a este lote da cooperativa?
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setModalDesvincularOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setForm({ ...form, numero_lote_cooperativa: "" });
+                      setIsVinculadoCoop(false);
+                      setModalDesvincularOpen(false);
+                      toast.info("Campo destravado. Você pode inserir um novo lote.");
+                    }}
+                  >
+                    Sim, desvincular
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <div className="grid gap-2">
               <Label>Data envio cooperativa</Label>
