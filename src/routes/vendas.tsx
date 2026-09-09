@@ -174,6 +174,7 @@ const vendaSchema = z.object({
   descontos: z.string().optional().or(z.literal("")),
   conta_corrente: z.string().trim().max(120).optional().or(z.literal("")),
   is_ds: z.string().optional().or(z.literal("")),
+  sobras_sacas: z.string().optional().or(z.literal("")),
   data_recebimento_premio: z.string().optional().or(z.literal("")),
 });
 
@@ -602,6 +603,7 @@ function NovaVendaDialog({
     cooperado: "",
     data_envio_armazem: "",
     sacas_do_lote: "",
+    sobras_sacas: "",
     nr_remessa_cooperativa: "",
     amostra: "",
     lotes_agrupados: "",
@@ -654,6 +656,7 @@ function NovaVendaDialog({
         cooperado: parsed.cooperado || null,
         data_envio_armazem: parsed.data_envio_armazem || null,
         sacas_do_lote: parsed.sacas_do_lote ? Number(parsed.sacas_do_lote) : null,
+        sobras_sacas: parsed.sobras_sacas ? Number(parsed.sobras_sacas) : null,
         nr_remessa_cooperativa: parsed.nr_remessa_cooperativa || null,
 
         // Venda Safra
@@ -752,6 +755,16 @@ function NovaVendaDialog({
                 className="h-12 text-base"
                 value={form.sacas_do_lote}
                 onChange={(e) => setForm({ ...form, sacas_do_lote: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Sobras (Sacas)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                className="h-12 text-base"
+                value={form.sobras_sacas}
+                onChange={(e) => setForm({ ...form, sobras_sacas: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
@@ -1054,6 +1067,7 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
     descontos: venda.descontos?.toString() ?? "",
     conta_corrente: venda.conta_corrente ?? "",
     is_ds: venda.is_ds?.toString() ?? "",
+    sobras_sacas: venda.sobras_sacas?.toString() ?? "",
     data_recebimento_premio: venda.data_recebimento_premio ?? "",
   });
 
@@ -1094,6 +1108,7 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
         cooperado: parsed.cooperado || null,
         data_envio_armazem: parsed.data_envio_armazem || null,
         sacas_do_lote: parsed.sacas_do_lote ? Number(parsed.sacas_do_lote) : null,
+        sobras_sacas: parsed.sobras_sacas ? Number(parsed.sobras_sacas) : null,
         nr_remessa_cooperativa: parsed.nr_remessa_cooperativa || null,
         amostra: parsed.amostra || null,
         lotes_agrupados: parsed.lotes_agrupados || null,
@@ -1171,6 +1186,16 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
                 className="h-12 text-base"
                 value={form.sacas_do_lote}
                 onChange={(e) => setForm({ ...form, sacas_do_lote: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Sobras (Sacas)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                className="h-12 text-base"
+                value={form.sobras_sacas}
+                onChange={(e) => setForm({ ...form, sobras_sacas: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
@@ -1421,6 +1446,7 @@ function RelatorioVendasDialog({
           Cooperado: v.cooperado ?? "",
           "Data envio armazém": v.data_envio_armazem ?? "",
           "Sacas do lote": v.sacas_do_lote ?? null,
+          "Sobras (Sacas)": v.sobras_sacas ?? null,
           "Nº remessa cooperativa": v.nr_remessa_cooperativa ?? "",
           Amostra: v.amostra ?? "",
           "NF venda": v.nf_venda ?? "",

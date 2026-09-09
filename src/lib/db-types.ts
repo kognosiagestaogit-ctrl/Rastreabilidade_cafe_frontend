@@ -58,6 +58,7 @@ export type Venda = {
   sacas_do_lote: number | null;
   nr_remessa_cooperativa: string | null;
   lotes_agrupados: string | null;
+  sobras_sacas: number | null;
   descontos: number | null;
   conta_corrente: string | null;
   is_ds: number | null;
