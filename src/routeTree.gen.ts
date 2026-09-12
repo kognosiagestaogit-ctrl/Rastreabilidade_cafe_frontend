@@ -18,6 +18,7 @@ import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as FazendasRouteImport } from './routes/fazendas'
 import { Route as AmostrasRouteImport } from './routes/amostras'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AmostrasIdRouteImport } from './routes/amostras_.$id'
 
 const VendasRoute = VendasRouteImport.update({
   id: '/vendas',
@@ -64,6 +65,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AmostrasIdRoute = AmostrasIdRouteImport.update({
+  id: '/amostras_/$id',
+  path: '/amostras/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/ordem-servico': typeof OrdemServicoRoute
   '/rainforest': typeof RainforestRoute
   '/vendas': typeof VendasRoute
+  '/amostras/$id': typeof AmostrasIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/ordem-servico': typeof OrdemServicoRoute
   '/rainforest': typeof RainforestRoute
   '/vendas': typeof VendasRoute
+  '/amostras/$id': typeof AmostrasIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/ordem-servico': typeof OrdemServicoRoute
   '/rainforest': typeof RainforestRoute
   '/vendas': typeof VendasRoute
+  '/amostras_/$id': typeof AmostrasIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/ordem-servico'
     | '/rainforest'
     | '/vendas'
+    | '/amostras/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/ordem-servico'
     | '/rainforest'
     | '/vendas'
+    | '/amostras/$id'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/ordem-servico'
     | '/rainforest'
     | '/vendas'
+    | '/amostras_/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   OrdemServicoRoute: typeof OrdemServicoRoute
   RainforestRoute: typeof RainforestRoute
   VendasRoute: typeof VendasRoute
+  AmostrasIdRoute: typeof AmostrasIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/amostras_/$id': {
+      id: '/amostras_/$id'
+      path: '/amostras/$id'
+      fullPath: '/amostras/$id'
+      preLoaderRoute: typeof AmostrasIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +245,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrdemServicoRoute: OrdemServicoRoute,
   RainforestRoute: RainforestRoute,
   VendasRoute: VendasRoute,
+  AmostrasIdRoute: AmostrasIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,4 +1,3 @@
-
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
@@ -81,9 +80,11 @@ export function AmostrasPage() {
     return amostras.filter((a) => {
       const termo = buscaApplied.trim().toLowerCase();
       if (!termo) return true;
-      const cooperativaLotes = a.vendas?.map(v => v.numero_lote_cooperativa).join(" ") || "";
+      const cooperativaLotes = a.vendas?.map((v) => v.numero_lote_cooperativa).join(" ") || "";
       return [a.codigo_amostra, a.anuncio_venda, a.observacoes, cooperativaLotes].some((c) =>
-        String(c ?? "").toLowerCase().includes(termo),
+        String(c ?? "")
+          .toLowerCase()
+          .includes(termo),
       );
     });
   }, [amostras, buscaApplied]);
@@ -149,15 +150,33 @@ export function AmostrasPage() {
               className="h-10 pl-9"
             />
           </div>
-          <Button onClick={() => { setBuscaApplied(buscaDraft); toast.success("Filtros aplicados"); }} className="h-10 gap-2">
+          <Button
+            onClick={() => {
+              setBuscaApplied(buscaDraft);
+              toast.success("Filtros aplicados");
+            }}
+            className="h-10 gap-2"
+          >
             <Filter className="h-4 w-4" /> Aplicar filtros
           </Button>
-          <Button variant="outline" onClick={() => { setBuscaDraft(""); setBuscaApplied(""); toast.info("Filtros limpos"); }} className="h-10 gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setBuscaDraft("");
+              setBuscaApplied("");
+              toast.info("Filtros limpos");
+            }}
+            className="h-10 gap-2"
+          >
             <RotateCcw className="h-4 w-4" /> Limpar filtros
           </Button>
         </div>
 
-        <AmostraListView amostras={amostrasVisao} onEditVenda={setEditVenda} onEditAmostra={setEditAmostra} />
+        <AmostraListView
+          amostras={amostrasVisao}
+          onEditVenda={setEditVenda}
+          onEditAmostra={setEditAmostra}
+        />
       </div>
 
       {editAmostra && fazendaAtual && (
@@ -312,10 +331,7 @@ function NovaAmostraDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mut.isPending}>
             Cancelar
           </Button>
-          <Button
-            onClick={() => mut.mutate()}
-            disabled={mut.isPending || !form.codigo_amostra}
-          >
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !form.codigo_amostra}>
             {mut.isPending ? "Salvando..." : "Salvar amostra"}
           </Button>
         </DialogFooter>
@@ -365,7 +381,7 @@ function EditarAmostraDialog({
   const mut = useMutation({
     mutationFn: async () => {
       const parsed = amostraSchema.parse(form);
-      
+
       // 1. Atualizar dados da Amostra
       await apiClient.put(`/api/amostras/${amostra.id}`, {
         codigo_amostra: parsed.codigo_amostra,
@@ -385,7 +401,7 @@ function EditarAmostraDialog({
       // 2. Vincular Vendas (se houver alguma selecionada no momento do save)
       if (selectedVendas.length > 0) {
         await apiClient.post(`/api/amostras/${amostra.id}/vincular-vendas`, {
-          vendasIds: selectedVendas
+          vendasIds: selectedVendas,
         });
       }
     },
@@ -423,7 +439,7 @@ function EditarAmostraDialog({
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground border-b pb-2">
               Dados da Amostra
             </h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1 sm:col-span-3">
                 <Label>Código da Amostra *</Label>
@@ -512,17 +528,24 @@ function EditarAmostraDialog({
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground border-b pb-2">
               Vendas Vinculadas
             </h3>
-            
+
             {amostra.vendas && amostra.vendas.length > 0 ? (
               <div className="flex flex-col gap-2">
-                {amostra.vendas.map(v => (
-                  <div key={v.id} className="flex items-center justify-between p-3 border rounded-lg bg-secondary/10 hover:bg-secondary/20 transition-colors">
+                {amostra.vendas.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between p-3 border rounded-lg bg-secondary/10 hover:bg-secondary/20 transition-colors"
+                  >
                     <div>
                       <p className="font-semibold text-sm">{v.cliente ?? "Sem Cliente"}</p>
-                      <p className="text-xs text-muted-foreground">NF: {v.nf_venda || "Sem NF"} • Tipo: {v.tipo_venda || "-"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        NF: {v.nf_venda || "Sem NF"} • Tipo: {v.tipo_venda || "-"}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-sm text-emerald-600 dark:text-emerald-400">{brl(Number(v.vl_liquido ?? 0))}</p>
+                      <p className="font-medium text-sm text-emerald-600 dark:text-emerald-400">
+                        {brl(Number(v.vl_liquido ?? 0))}
+                      </p>
                       <p className="font-semibold text-sm">{v.sacas_vendidas} sc</p>
                     </div>
                   </div>
@@ -535,8 +558,8 @@ function EditarAmostraDialog({
             )}
 
             {!showAvailableVendas ? (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="mt-2 w-fit gap-2"
                 onClick={() => setShowAvailableVendas(true)}
               >
@@ -546,7 +569,12 @@ function EditarAmostraDialog({
               <div className="mt-4 p-4 border rounded-xl bg-card shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-sm">Vendas Disponíveis</h4>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAvailableVendas(false)} className="h-8 text-xs">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAvailableVendas(false)}
+                    className="h-8 text-xs"
+                  >
                     Ocultar
                   </Button>
                 </div>
@@ -557,46 +585,68 @@ function EditarAmostraDialog({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2">
-                    {vendasDisponiveis.map(v => (
-                      <label key={v.id} className="flex items-center gap-3 p-3 border rounded-lg bg-background hover:border-primary/50 cursor-pointer transition-colors">
-                        <input 
-                          type="checkbox" 
+                    {vendasDisponiveis.map((v) => (
+                      <label
+                        key={v.id}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-background hover:border-primary/50 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
                           className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                           checked={selectedVendas.includes(v.id)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedVendas(prev => [...prev, v.id]);
-                              setForm(prev => ({
+                              setSelectedVendas((prev) => [...prev, v.id]);
+                              setForm((prev) => ({
                                 ...prev,
-                                total_sacas: (Number(prev.total_sacas || 0) + Number(v.sacas_vendidas || 0)).toString(),
-                                a_receber_previsto: (Number(prev.a_receber_previsto || 0) + Number(v.vl_liquido || 0)).toString(),
+                                total_sacas: (
+                                  Number(prev.total_sacas || 0) + Number(v.sacas_vendidas || 0)
+                                ).toString(),
+                                a_receber_previsto: (
+                                  Number(prev.a_receber_previsto || 0) + Number(v.vl_liquido || 0)
+                                ).toString(),
                               }));
                             } else {
-                              setSelectedVendas(prev => prev.filter(id => id !== v.id));
-                              setForm(prev => ({
+                              setSelectedVendas((prev) => prev.filter((id) => id !== v.id));
+                              setForm((prev) => ({
                                 ...prev,
-                                total_sacas: Math.max(0, Number(prev.total_sacas || 0) - Number(v.sacas_vendidas || 0)).toString(),
-                                a_receber_previsto: Math.max(0, Number(prev.a_receber_previsto || 0) - Number(v.vl_liquido || 0)).toString(),
+                                total_sacas: Math.max(
+                                  0,
+                                  Number(prev.total_sacas || 0) - Number(v.sacas_vendidas || 0),
+                                ).toString(),
+                                a_receber_previsto: Math.max(
+                                  0,
+                                  Number(prev.a_receber_previsto || 0) - Number(v.vl_liquido || 0),
+                                ).toString(),
                               }));
                             }
                           }}
                         />
                         <div className="flex flex-col flex-1">
-                          <span className="font-semibold text-sm">{v.tipo_venda} - {v.cliente ?? "Sem Cliente"}</span>
-                          <span className="text-xs text-muted-foreground">Lote: {v.numero_lote_cooperativa || "N/A"}</span>
+                          <span className="font-semibold text-sm">
+                            {v.tipo_venda} - {v.cliente ?? "Sem Cliente"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Lote: {v.numero_lote_cooperativa || "N/A"}
+                          </span>
                         </div>
                         <div className="flex flex-col text-right">
-                          <span className="font-medium text-sm text-emerald-600 dark:text-emerald-400">{brl(Number(v.vl_liquido ?? 0))}</span>
-                          <span className="text-xs font-semibold text-muted-foreground">{v.sacas_vendidas} sc</span>
+                          <span className="font-medium text-sm text-emerald-600 dark:text-emerald-400">
+                            {brl(Number(v.vl_liquido ?? 0))}
+                          </span>
+                          <span className="text-xs font-semibold text-muted-foreground">
+                            {v.sacas_vendidas} sc
+                          </span>
                         </div>
                       </label>
                     ))}
                   </div>
                 )}
-                
+
                 {selectedVendas.length > 0 && (
                   <div className="text-sm text-primary border-l-2 border-primary pl-3 py-2 bg-primary/10 rounded-r-lg mt-2 font-medium">
-                    {selectedVendas.length} venda(s) selecionada(s). Os valores foram somados aos campos da amostra automaticamente. Clique em "Salvar alterações" para efetivar.
+                    {selectedVendas.length} venda(s) selecionada(s). Os valores foram somados aos
+                    campos da amostra automaticamente. Clique em "Salvar alterações" para efetivar.
                   </div>
                 )}
               </div>
@@ -608,7 +658,11 @@ function EditarAmostraDialog({
           <Button
             variant="destructive"
             onClick={() => {
-              if (window.confirm(`Tem certeza que deseja excluir a amostra ${amostra.codigo_amostra}?`)) {
+              if (
+                window.confirm(
+                  `Tem certeza que deseja excluir a amostra ${amostra.codigo_amostra}?`,
+                )
+              ) {
                 delMut.mutate();
               }
             }}
@@ -617,7 +671,11 @@ function EditarAmostraDialog({
             <Trash2 className="h-4 w-4 mr-1" /> Excluir
           </Button>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mut.isPending || delMut.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={mut.isPending || delMut.isPending}
+            >
               Cancelar
             </Button>
             <Button
@@ -633,8 +691,15 @@ function EditarAmostraDialog({
   );
 }
 
-function AmostraListView({ amostras, onEditVenda, onEditAmostra }: { amostras: Amostra[]; onEditVenda: (v: Venda) => void; onEditAmostra: (a: Amostra) => void; }) {
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+function AmostraListView({
+  amostras,
+  onEditAmostra,
+}: {
+  amostras: Amostra[];
+  onEditVenda: (v: Venda) => void;
+  onEditAmostra: (a: Amostra) => void;
+}) {
+  const navigate = useNavigate();
 
   if (amostras.length === 0) {
     return (
@@ -647,35 +712,38 @@ function AmostraListView({ amostras, onEditVenda, onEditAmostra }: { amostras: A
   return (
     <div className="space-y-4">
       {amostras.map((a) => {
-        const isExpanded = expandedGroups[a.id];
         const vCount = a.vendas?.length ?? 0;
-        
+
         // Sum properties for display if needed, but Amostra has native props
         const liquido = Number(a.a_receber_previsto ?? 0);
         const recebido = Number(a.valor_recebido ?? 0);
         const sacas = Number(a.total_sacas ?? 0);
 
         return (
-          <div key={a.id} className="rounded-xl border bg-card shadow-sm overflow-hidden transition-all duration-200 hover:border-primary/30">
+          <div
+            key={a.id}
+            className="rounded-xl border bg-card shadow-sm overflow-hidden transition-all duration-200 hover:border-primary/30"
+          >
             <button
-              onClick={() => setExpandedGroups((p) => ({ ...p, [a.id]: !p[a.id] }))}
-              className="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between bg-secondary/20 px-5 py-4 hover:bg-secondary/40 transition-colors gap-4"
+              onClick={() => navigate({ to: `/amostras/${a.id}` })}
+              className="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between bg-secondary/20 px-5 py-4 hover:bg-secondary/40 transition-colors gap-4 cursor-pointer text-left"
             >
               <div className="flex items-center gap-4">
                 <div className="mt-1 sm:mt-0">
-                  {isExpanded ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="text-left flex flex-col gap-1">
                   <div className="flex items-center gap-3">
                     <h3 className="font-bold text-foreground text-lg tracking-tight">
                       {a.codigo_amostra}
                     </h3>
-                    <Button 
-                      variant="secondary" 
-                      size="sm" 
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       className="h-7 px-2.5 gap-1.5 text-xs font-medium"
                       onClick={(e) => {
                         e.stopPropagation();
+                        e.preventDefault();
                         onEditAmostra(a);
                       }}
                     >
@@ -688,108 +756,36 @@ function AmostraListView({ amostras, onEditVenda, onEditAmostra }: { amostras: A
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-4 sm:gap-8 text-sm text-right pl-9 sm:pl-0 w-full sm:w-auto">
                 <div className="flex-1 sm:flex-none">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold mb-0.5">Sacas (Total)</p>
-                  <p className="font-semibold text-foreground">{num(sacas, 1)} <span className="text-muted-foreground font-normal text-xs">sc</span></p>
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                    Sacas (Total)
+                  </p>
+                  <p className="font-semibold text-foreground">
+                    {num(sacas, 1)}{" "}
+                    <span className="text-muted-foreground font-normal text-xs">sc</span>
+                  </p>
                 </div>
                 <div className="flex-1 sm:flex-none">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold mb-0.5">A Receber / Líquido</p>
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                    A Receber / Líquido
+                  </p>
                   <p className="font-semibold text-foreground">{brl(liquido)}</p>
                 </div>
                 <div className="flex-1 sm:flex-none">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold mb-0.5">Valor Recebido</p>
-                  <p className="font-bold text-emerald-600 dark:text-emerald-400">{brl(recebido)}</p>
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold mb-0.5">
+                    Valor Recebido
+                  </p>
+                  <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {brl(recebido)}
+                  </p>
                 </div>
               </div>
             </button>
-            
-            {isExpanded && (
-              <div className="border-t bg-background/50 p-5 sm:p-6 space-y-8 animate-in slide-in-from-top-2 duration-200">
-                
-                {/* Resumo da Amostra */}
-                <div className="space-y-3">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/50 pb-2 flex items-center gap-2">
-                    <FileSpreadsheet className="h-3.5 w-3.5" /> Detalhes da Amostra
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-y-4 gap-x-6 text-sm bg-card p-4 rounded-xl border shadow-sm">
-                    <div>
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Data Recebimento</p>
-                      <p className="font-medium">{a.data_recebimento ? new Date(a.data_recebimento).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "-"}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Conta Corrente</p>
-                      <p className="font-medium">{a.conta_corrente || "-"}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Prêmio Rainforest</p>
-                      <p className="font-medium text-primary">{brl(Number(a.premio_rainforest || 0))}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">IS/DS</p>
-                      <p className="font-medium">{brl(Number(a.is_ds || 0))}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descontos</p>
-                      <p className="font-medium text-destructive">{brl(Number(a.descontos || 0))}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Funrural</p>
-                      <p className="font-medium text-destructive">{brl(Number(a.v_funrural || 0))}</p>
-                    </div>
-                    {a.observacoes && (
-                      <div className="col-span-2 sm:col-span-4 lg:col-span-5 pt-2 border-t mt-2">
-                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Observações</p>
-                        <p className="text-sm bg-secondary/30 p-3 rounded-lg border-l-2 border-primary/50 text-foreground whitespace-pre-wrap">{a.observacoes}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Vendas Vinculadas */}
-                <div className="space-y-3">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/50 pb-2 flex items-center gap-2">
-                    <ShoppingCart className="h-3.5 w-3.5" /> Vendas que compõem a amostra
-                  </h4>
-                  {a.vendas && a.vendas.length > 0 ? (
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {a.vendas.map(v => {
-                        const status = getVendaEffectiveStatus(v);
-                        const StatusIcon = VENDA_STATUS_ICONS[status];
-                        return (
-                          <div key={v.id} onClick={() => onEditVenda(v)} className="flex items-center justify-between rounded-xl border bg-card p-4 shadow-sm cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary group-hover:bg-primary/10 transition-colors">
-                                <StatusIcon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-bold text-foreground">{v.cliente ?? "Sem cliente"}</p>
-                                <p className="truncate text-[11px] font-medium text-muted-foreground mt-0.5">
-                                  NF: <span className="text-foreground">{v.nf_venda || "-"}</span> • Coop: <span className="text-foreground">{v.numero_lote_cooperativa || "-"}</span>
-                                </p>
-                              </div>
-                            </div>
-                            <div className="shrink-0 text-right">
-                              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{brl(Number(v.vl_liquido ?? v.a_receber_previsto ?? 0))}</p>
-                              <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">{num(v.sacas_vendidas, 1)} sc</p>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed bg-card/40 p-6 text-center text-sm text-muted-foreground">
-                      Nenhuma venda registrada para esta amostra.
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            )}
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
