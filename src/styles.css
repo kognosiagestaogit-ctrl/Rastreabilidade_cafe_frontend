@@ -70,10 +70,10 @@
   --card-foreground: oklch(0.18 0.04 260);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.04 260);
-  --primary: oklch(0.32 0.09 255);              /* #1e3a5f-ish */
+  --primary: oklch(0.32 0.09 255); /* #1e3a5f-ish */
   --primary-foreground: oklch(0.985 0.005 240);
   --primary-soft: oklch(0.92 0.04 250);
-  --accent: oklch(0.58 0.13 250);               /* #3b6fa0 */
+  --accent: oklch(0.58 0.13 250); /* #3b6fa0 */
   --accent-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.95 0.015 250);
   --secondary-foreground: oklch(0.22 0.05 260);
@@ -151,13 +151,24 @@
   }
 
   /* Acessibilidade: alvos de toque grandes para usuários pouco técnicos */
-  button, [role="button"], a {
+  button,
+  [role="button"],
+  a {
     -webkit-tap-highlight-color: transparent;
   }
 
-  h1 { font-size: 1.875rem; font-weight: 700; letter-spacing: -0.01em; }
-  h2 { font-size: 1.375rem; font-weight: 600; }
-  label { font-weight: 500; }
+  h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 1.375rem;
+    font-weight: 600;
+  }
+  label {
+    font-weight: 500;
+  }
 }
 
 @theme inline {

@@ -1,5 +1,20 @@
 import { useState, useEffect } from "react";
-import { Settings, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Search, ShoppingBag, FlaskConical, ChevronDown, ChevronUp, Trash2, Download } from "lucide-react";
+import {
+  Settings,
+  Save,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Search,
+  ShoppingBag,
+  FlaskConical,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Download,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -59,9 +74,11 @@ export function ConfigDialog({
   const [buscarLoading, setBuscarLoading] = useState(false);
   const [vendasFetched, setVendasFetched] = useState<any[] | null>(null);
   const [importando, setImportando] = useState(false);
-  const [buscarResult, setBuscarResult] = useState<{ vendas: number; amostras: number } | null>(null);
-  
-  const [buscarMes, setBuscarMes] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [buscarResult, setBuscarResult] = useState<{ vendas: number; amostras: number } | null>(
+    null,
+  );
+
+  const [buscarMes, setBuscarMes] = useState(String(new Date().getMonth() + 1).padStart(2, "0"));
   const [buscarAno, setBuscarAno] = useState(new Date().getFullYear().toString());
 
   const handleBuscar = async () => {
@@ -79,7 +96,7 @@ export function ConfigDialog({
     setVendasFetched(null);
     try {
       const { data } = await apiClient.get<{ data: any[] }>(
-        `/api/integracoes/${existing.id}/buscar-registros?mes=${buscarMes}&ano=${buscarAno}`
+        `/api/integracoes/${existing.id}/buscar-registros?mes=${buscarMes}&ano=${buscarAno}`,
       );
       setVendasFetched(data || []);
       if (data && data.length > 0) {
@@ -100,7 +117,7 @@ export function ConfigDialog({
     try {
       const res = await apiClient.post<{ resultados: { vendas: number; amostras: number } }>(
         `/api/integracoes/${existing.id}/salvar-registros`,
-        { vendasResumo: vendasFetched }
+        { vendasResumo: vendasFetched },
       );
       setBuscarResult(res.resultados);
       setVendasFetched(null);
@@ -172,7 +189,9 @@ export function ConfigDialog({
       }
 
       if (fazendaAtual?.id) {
-        const list = await apiClient.get<IntegracaoCredencial[]>(`/api/fazendas/${fazendaAtual.id}/integracoes`);
+        const list = await apiClient.get<IntegracaoCredencial[]>(
+          `/api/fazendas/${fazendaAtual.id}/integracoes`,
+        );
         const minasul = list.find((i) => i.provider === "minasul") ?? null;
         setExisting(minasul);
       }
@@ -186,7 +205,7 @@ export function ConfigDialog({
 
   const handleDelete = async () => {
     if (!existing) return;
-    
+
     setSaving(true);
     try {
       await apiClient.delete(`/api/integracoes/${existing.id}`);
@@ -228,7 +247,11 @@ export function ConfigDialog({
               <div>
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
                   Minasul credenciais
-                  {showLogin ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  {showLogin ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Será usado para buscar dados automaticamente em minasul.
@@ -302,11 +325,7 @@ export function ConfigDialog({
                           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           tabIndex={-1}
                         >
-                          {showSenha ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
@@ -324,7 +343,12 @@ export function ConfigDialog({
                   {isEditing && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button type="button" variant="destructive" disabled={saving || loadingFetch} className="gap-2">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          disabled={saving || loadingFetch}
+                          className="gap-2"
+                        >
                           <Trash2 className="h-4 w-4" /> Limpar registro
                         </Button>
                       </AlertDialogTrigger>
@@ -332,12 +356,17 @@ export function ConfigDialog({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Isso removerá permanentemente as credenciais da Minasul. Essa ação não pode ser desfeita e a sincronização automática parará de funcionar até que novas credenciais sejam configuradas.
+                            Isso removerá permanentemente as credenciais da Minasul. Essa ação não
+                            pode ser desfeita e a sincronização automática parará de funcionar até
+                            que novas credenciais sejam configuradas.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
                             Sim, limpar credenciais
                           </AlertDialogAction>
                         </AlertDialogFooter>
@@ -371,7 +400,9 @@ export function ConfigDialog({
 
               <div className="flex items-center gap-2 mb-4">
                 <div className="grid gap-1.5 flex-1">
-                  <Label htmlFor="buscar-mes" className="text-xs">Mês</Label>
+                  <Label htmlFor="buscar-mes" className="text-xs">
+                    Mês
+                  </Label>
                   <Input
                     id="buscar-mes"
                     placeholder="Ex: 05"
@@ -383,7 +414,9 @@ export function ConfigDialog({
                   />
                 </div>
                 <div className="grid gap-1.5 flex-1">
-                  <Label htmlFor="buscar-ano" className="text-xs">Ano</Label>
+                  <Label htmlFor="buscar-ano" className="text-xs">
+                    Ano
+                  </Label>
                   <Input
                     id="buscar-ano"
                     placeholder="Ex: 2024"
@@ -394,8 +427,16 @@ export function ConfigDialog({
                   />
                 </div>
                 <div className="grid gap-1.5 self-end">
-                  <Button onClick={handleBuscar} disabled={buscarLoading} className="gap-2 shrink-0">
-                    {buscarLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  <Button
+                    onClick={handleBuscar}
+                    disabled={buscarLoading}
+                    className="gap-2 shrink-0"
+                  >
+                    {buscarLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
                     Buscar
                   </Button>
                 </div>
@@ -406,19 +447,31 @@ export function ConfigDialog({
                   <div className="flex items-center justify-between mb-4 bg-primary/10 p-3 rounded-md">
                     <div>
                       <h4 className="font-medium text-sm text-primary">Registros encontrados</h4>
-                      <p className="text-xs text-muted-foreground">Foram encontrados {vendasFetched.length} registro(s) neste período.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Foram encontrados {vendasFetched.length} registro(s) neste período.
+                      </p>
                     </div>
-                    <Button onClick={handleImportar} disabled={importando} className="gap-2 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground">
-                      {importando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    <Button
+                      onClick={handleImportar}
+                      disabled={importando}
+                      className="gap-2 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {importando ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
                       Importar Todos
                     </Button>
                   </div>
                 </div>
               )}
-              
+
               {vendasFetched !== null && vendasFetched.length === 0 && (
                 <div className="mt-4 pt-4 border-t border-border/50">
-                   <p className="text-sm text-center text-muted-foreground py-2">Nenhum registro encontrado no período.</p>
+                  <p className="text-sm text-center text-muted-foreground py-2">
+                    Nenhum registro encontrado no período.
+                  </p>
                 </div>
               )}
 
@@ -429,12 +482,16 @@ export function ConfigDialog({
                     <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
                       <ShoppingBag className="h-5 w-5 text-emerald-500 mb-1" />
                       <span className="text-2xl font-bold">{buscarResult.vendas}</span>
-                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Vendas Salvas</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                        Vendas Salvas
+                      </span>
                     </div>
                     <div className="flex flex-col items-center justify-center p-3 rounded-md bg-background border shadow-sm">
                       <FlaskConical className="h-5 w-5 text-blue-500 mb-1" />
                       <span className="text-2xl font-bold">{buscarResult.amostras}</span>
-                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Amostras Salvas</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                        Amostras Salvas
+                      </span>
                     </div>
                   </div>
                 </div>

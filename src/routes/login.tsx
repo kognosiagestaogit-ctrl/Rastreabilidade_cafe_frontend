@@ -48,18 +48,19 @@ function LoginPage() {
       navigate({ to: "/" });
     } catch (err: any) {
       let errorMsg = "E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.";
-      
+
       // Tratamento para API offline/indisponível
       if (
-        err.message && 
-        (err.message.includes("Failed to fetch") || 
-         err.message.includes("NetworkError") || 
-         err.message.includes("Network request failed") ||
-         err.message.includes("Servidor indisponível"))
+        err.message &&
+        (err.message.includes("Failed to fetch") ||
+          err.message.includes("NetworkError") ||
+          err.message.includes("Network request failed") ||
+          err.message.includes("Servidor indisponível"))
       ) {
-        errorMsg = "Servidor indisponível no momento. Verifique sua conexão ou tente novamente mais tarde.";
+        errorMsg =
+          "Servidor indisponível no momento. Verifique sua conexão ou tente novamente mais tarde.";
       }
-      
+
       setLoginError(errorMsg);
       toast.error(errorMsg);
     } finally {

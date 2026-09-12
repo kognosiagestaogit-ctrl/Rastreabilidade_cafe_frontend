@@ -1,5 +1,14 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Tractor, Coffee, ShoppingCart, LogOut, User, Settings, FileSpreadsheet } from "lucide-react";
+import {
+  LayoutDashboard,
+  Tractor,
+  Coffee,
+  ShoppingCart,
+  LogOut,
+  User,
+  Settings,
+  FileSpreadsheet,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,

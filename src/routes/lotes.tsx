@@ -142,8 +142,6 @@ const STATUS_ICONS: Record<LoteStatus, React.ComponentType<{ className?: string 
   ENVIADO_COOPERATIVA: Building2,
 };
 
-
-
 function LotesPage() {
   const { fazendaAtual, fazendas } = useFazendas();
   const qc = useQueryClient();
@@ -154,7 +152,7 @@ function LotesPage() {
 
   const [buscaApplied, setBuscaApplied] = useState("");
   const [safraApplied, setSafraApplied] = useState<string>("TODAS");
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   const handleApplyFilters = () => {
     setBuscaApplied(buscaDraft);
@@ -232,7 +230,11 @@ function LotesPage() {
         l.numero_lote_cooperativa,
         l.numero_tulha,
       ];
-      return campos.some((c) => String(c ?? "").toLowerCase().includes(termo));
+      return campos.some((c) =>
+        String(c ?? "")
+          .toLowerCase()
+          .includes(termo),
+      );
     });
   }, [lotes, buscaApplied, safraApplied]);
 
@@ -295,18 +297,18 @@ function LotesPage() {
               </Button>
               <div className="ml-auto flex items-center gap-1 rounded-lg border bg-card p-1">
                 <Button
-                  variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                  variant={viewMode === "kanban" ? "default" : "ghost"}
                   size="sm"
                   className="h-8 px-3 gap-1.5"
-                  onClick={() => setViewMode('kanban')}
+                  onClick={() => setViewMode("kanban")}
                 >
                   <LayoutGrid className="h-4 w-4" /> Kanban
                 </Button>
                 <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  variant={viewMode === "list" ? "default" : "ghost"}
                   size="sm"
                   className="h-8 px-3 gap-1.5"
-                  onClick={() => setViewMode('list')}
+                  onClick={() => setViewMode("list")}
                 >
                   <LayoutList className="h-4 w-4" /> Lista
                 </Button>
@@ -315,7 +317,7 @@ function LotesPage() {
                 {lotesFiltrados.length} de {lotes.length} lote(s)
               </span>
             </div>
-            {viewMode === 'kanban' && (
+            {viewMode === "kanban" && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                 {STATUS_ORDER.map((status) => {
                   const itens = lotesFiltrados.filter((l) => getLoteEffectiveStatus(l) === status);
@@ -367,11 +369,8 @@ function LotesPage() {
                 })}
               </div>
             )}
-            {viewMode === 'list' && (
-              <LoteListView
-                lotes={lotesFiltrados}
-                onEdit={(l) => setEditLote(l)}
-              />
+            {viewMode === "list" && (
+              <LoteListView lotes={lotesFiltrados} onEdit={(l) => setEditLote(l)} />
             )}
           </>
         )}
@@ -408,13 +407,19 @@ function LoteCard({
           <span className="font-semibold text-foreground">Lote #{lote.numero_lote_fazenda}</span>
           <div className="flex items-center gap-1">
             {lote.quantidade_vendas ? (
-              <span title={`${lote.quantidade_vendas} Venda(s) vinculada(s)`} className="flex h-5 items-center gap-0.5 rounded bg-green-100 px-1.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+              <span
+                title={`${lote.quantidade_vendas} Venda(s) vinculada(s)`}
+                className="flex h-5 items-center gap-0.5 rounded bg-green-100 px-1.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              >
                 <DollarSign className="h-3 w-3" />
                 {lote.quantidade_vendas}
               </span>
             ) : null}
             {lote.amostra && (
-              <span title={`Amostra vinculada: ${lote.amostra}`} className="flex h-5 items-center gap-0.5 rounded bg-blue-100 px-1.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+              <span
+                title={`Amostra vinculada: ${lote.amostra}`}
+                className="flex h-5 items-center gap-0.5 rounded bg-blue-100 px-1.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+              >
                 <FlaskConical className="h-3 w-3" />
               </span>
             )}
@@ -425,7 +430,7 @@ function LoteCard({
             )}
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
           {effectiveStatus === "EM_COLHEITA" && (
             <>
@@ -495,7 +500,15 @@ function LoteCard({
               </div>
               <div className="flex justify-between">
                 <span>Umidade:</span>
-                <span className={!lote.umidade ? "text-destructive font-medium" : umidadeForaIdeal ? "text-warning-foreground font-medium" : ""}>
+                <span
+                  className={
+                    !lote.umidade
+                      ? "text-destructive font-medium"
+                      : umidadeForaIdeal
+                        ? "text-warning-foreground font-medium"
+                        : ""
+                  }
+                >
                   {lote.umidade ? `${num(lote.umidade, 1)}%` : "Pendente"}
                 </span>
               </div>
@@ -547,13 +560,7 @@ function LoteCard({
   );
 }
 
-function LoteListView({
-  lotes,
-  onEdit,
-}: {
-  lotes: Lote[];
-  onEdit: (lote: Lote) => void;
-}) {
+function LoteListView({ lotes, onEdit }: { lotes: Lote[]; onEdit: (lote: Lote) => void }) {
   if (lotes.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-muted-foreground">Nenhum lote encontrado.</p>
@@ -587,33 +594,41 @@ function LoteListView({
                 key={lote.id}
                 onClick={() => onEdit(lote)}
                 className={`cursor-pointer border-b transition-colors last:border-0 hover:bg-secondary/30 ${
-                  i % 2 === 0 ? '' : 'bg-secondary/10'
-                } ${hasPending ? 'text-destructive' : ''}`}
+                  i % 2 === 0 ? "" : "bg-secondary/10"
+                } ${hasPending ? "text-destructive" : ""}`}
               >
                 <td className="px-4 py-3 font-semibold">
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1">
-                      {hasPending && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                      {hasPending && (
+                        <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                      )}
                       #{lote.numero_lote_fazenda}
                     </span>
                     <div className="flex items-center gap-1 ml-2">
                       {lote.quantidade_vendas ? (
-                        <span title={`${lote.quantidade_vendas} Venda(s) vinculada(s)`} className="flex h-5 items-center gap-0.5 rounded bg-green-100 px-1.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        <span
+                          title={`${lote.quantidade_vendas} Venda(s) vinculada(s)`}
+                          className="flex h-5 items-center gap-0.5 rounded bg-green-100 px-1.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        >
                           <DollarSign className="h-3 w-3" />
                           {lote.quantidade_vendas}
                         </span>
                       ) : null}
                       {lote.amostra && (
-                        <span title={`Amostra vinculada: ${lote.amostra}`} className="flex h-5 items-center gap-0.5 rounded bg-blue-100 px-1.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        <span
+                          title={`Amostra vinculada: ${lote.amostra}`}
+                          className="flex h-5 items-center gap-0.5 rounded bg-blue-100 px-1.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        >
                           <FlaskConical className="h-3 w-3" />
                         </span>
                       )}
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{lote.lote_colheita || '-'}</td>
-                <td className="px-4 py-3">{lote.safra || '-'}</td>
-                <td className="px-4 py-3 text-muted-foreground">{lote.tipo_cafe || '-'}</td>
+                <td className="px-4 py-3 text-muted-foreground">{lote.lote_colheita || "-"}</td>
+                <td className="px-4 py-3">{lote.safra || "-"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{lote.tipo_cafe || "-"}</td>
                 <td className="px-4 py-3">
                   <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium w-fit">
                     <Icon className="h-3 w-3 shrink-0" />
@@ -621,14 +636,18 @@ function LoteListView({
                   </span>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {lote.data_colheita_inicio ? dt(lote.data_colheita_inicio) : '-'}
+                  {lote.data_colheita_inicio ? dt(lote.data_colheita_inicio) : "-"}
                 </td>
-                <td className="px-4 py-3">{lote.numero_sacas ? `${num(lote.numero_sacas, 1)} sc` : '-'}</td>
                 <td className="px-4 py-3">
-                  {lote.umidade != null ? `${num(lote.umidade, 1)}%` : '-'}
+                  {lote.numero_sacas ? `${num(lote.numero_sacas, 1)} sc` : "-"}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{lote.numero_tulha || '-'}</td>
-                <td className="px-4 py-3 text-muted-foreground">{lote.numero_lote_cooperativa || '-'}</td>
+                <td className="px-4 py-3">
+                  {lote.umidade != null ? `${num(lote.umidade, 1)}%` : "-"}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{lote.numero_tulha || "-"}</td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {lote.numero_lote_cooperativa || "-"}
+                </td>
               </tr>
             );
           })}
@@ -694,7 +713,6 @@ function NovoLoteDialog({
     }, 800);
   };
   const talhoes = talhoesQ.data ?? [];
-
 
   const isColheitaPreenchida =
     form.numero_lote_fazenda.trim().length > 0 && form.lote_colheita.trim().length > 0;
@@ -1049,7 +1067,8 @@ function NovoLoteDialog({
                 <DialogHeader>
                   <DialogTitle>Desvincular vendas</DialogTitle>
                   <DialogDescription>
-                    Tem certeza que deseja desvincular as vendas associadas a este lote da cooperativa?
+                    Tem certeza que deseja desvincular as vendas associadas a este lote da
+                    cooperativa?
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -1072,9 +1091,7 @@ function NovoLoteDialog({
             </Dialog>
 
             <div className="grid gap-2">
-              <Label>
-                Data envio cooperativa
-              </Label>
+              <Label>Data envio cooperativa</Label>
               <Input
                 type="date"
                 className="h-12 text-base"
@@ -1083,16 +1100,13 @@ function NovoLoteDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label>
-                NF Remessa Cooperativa
-              </Label>
+              <Label>NF Remessa Cooperativa</Label>
               <Input
                 className="h-12 text-base"
                 value={form.nf_remessa_cooperativa}
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
               />
             </div>
-
           </div>
 
           <SectionHeader label="Observações" />
@@ -1108,7 +1122,11 @@ function NovoLoteDialog({
           <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button size="lg" onClick={() => mut.mutate()} disabled={mut.isPending || !isColheitaPreenchida}>
+          <Button
+            size="lg"
+            onClick={() => mut.mutate()}
+            disabled={mut.isPending || !isColheitaPreenchida}
+          >
             {mut.isPending ? "Salvando..." : "Salvar lote"}
           </Button>
         </DialogFooter>
@@ -1127,7 +1145,7 @@ function SectionHeader({ label }: { label: string }) {
 
 function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }) {
   const qc = useQueryClient();
-  
+
   const talhoesQ = useQuery({
     queryKey: ["talhoes", lote.fazenda_id],
     queryFn: async (): Promise<Talhao[]> => {
@@ -1135,7 +1153,6 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     },
   });
   const talhoes = talhoesQ.data ?? [];
-
 
   const [form, setForm] = useState({
     status: lote.status as LoteStatus,
@@ -1170,7 +1187,9 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     if (!form.numero_lote_cooperativa) return;
     setIsVerificandoCoop(true);
     try {
-      const res = await mockDb.updateLote(lote.id, { numero_lote_cooperativa: form.numero_lote_cooperativa }) as any;
+      const res = (await mockDb.updateLote(lote.id, {
+        numero_lote_cooperativa: form.numero_lote_cooperativa,
+      })) as any;
       if (res.venda_vinculada_id) {
         setIsVinculadoCoop(true);
         toast.success(res.mensagem_vinculo || "Venda vinculada!");
@@ -1259,11 +1278,11 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
         <DialogHeader>
           <DialogTitle>Lote #{lote.numero_lote_fazenda}</DialogTitle>
           <DialogDescription>
-            Atualize os dados e a etapa será recalculada automaticamente com base nos campos preenchidos.
+            Atualize os dados e a etapa será recalculada automaticamente com base nos campos
+            preenchidos.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-5 py-2">
-          
           <SectionHeader label="Colheita" />
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-2">
@@ -1522,7 +1541,8 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
                 <DialogHeader>
                   <DialogTitle>Desvincular vendas</DialogTitle>
                   <DialogDescription>
-                    Tem certeza que deseja desvincular as vendas associadas a este lote da cooperativa?
+                    Tem certeza que deseja desvincular as vendas associadas a este lote da
+                    cooperativa?
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -1561,10 +1581,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
                 onChange={(e) => setForm({ ...form, nf_remessa_cooperativa: e.target.value })}
               />
             </div>
-
           </div>
-
-
 
           <div className="grid gap-2">
             <Label>Observações</Label>
@@ -1590,7 +1607,11 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
             <Button variant="outline" size="lg" onClick={onClose}>
               Fechar
             </Button>
-            <Button size="lg" onClick={() => mut.mutate()} disabled={mut.isPending || !isColheitaPreenchida}>
+            <Button
+              size="lg"
+              onClick={() => mut.mutate()}
+              disabled={mut.isPending || !isColheitaPreenchida}
+            >
               Salvar
             </Button>
           </div>

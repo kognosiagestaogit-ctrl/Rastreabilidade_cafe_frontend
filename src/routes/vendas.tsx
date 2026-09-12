@@ -178,7 +178,6 @@ const vendaSchema = z.object({
   data_recebimento_premio: z.string().optional().or(z.literal("")),
 });
 
-
 export function VendasPage() {
   const { fazendaAtual, fazendas } = useFazendas();
   const qc = useQueryClient();
@@ -189,8 +188,8 @@ export function VendasPage() {
 
   const [buscaApplied, setBuscaApplied] = useState("");
   const [visaoApplied, setVisaoApplied] = useState<Visao>("todas");
-  
-      const [novaOpen, setNovaOpen] = useState(false);
+
+  const [novaOpen, setNovaOpen] = useState(false);
   const [editVenda, setEditVenda] = useState<Venda | null>(null);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
 
@@ -208,7 +207,6 @@ export function VendasPage() {
     toast.info("Filtros limpos");
   };
 
-  
   const vendasQ = useQuery({
     queryKey: ["vendas", fazendaAtual?.id],
     enabled: !!fazendaAtual,
@@ -217,7 +215,7 @@ export function VendasPage() {
     },
   });
 
-    const vendas = vendasQ.data ?? [];
+  const vendas = vendasQ.data ?? [];
 
   const vendasVisao = useMemo(() => {
     return vendas.filter((v) => {
@@ -230,14 +228,21 @@ export function VendasPage() {
       const termo = buscaApplied.trim().toLowerCase();
       if (!termo) return true;
       return [v.cliente, v.numero_lote_cooperativa, v.nf_venda, v.padrao].some((c) =>
-        String(c ?? "").toLowerCase().includes(termo),
+        String(c ?? "")
+          .toLowerCase()
+          .includes(termo),
       );
     });
   }, [vendas, visaoApplied, buscaApplied]);
 
   const totais = useMemo(() => {
-    let bruto = 0, liquido = 0, recebido = 0, saldo = 0, premio = 0, sacas = 0;
-    
+    let bruto = 0,
+      liquido = 0,
+      recebido = 0,
+      saldo = 0,
+      premio = 0,
+      sacas = 0;
+
     for (const v of vendasVisao) {
       bruto += Number(v.vl_bruto ?? 0);
       const liq = Number(v.vl_liquido ?? v.a_receber_previsto ?? 0);
@@ -247,7 +252,7 @@ export function VendasPage() {
       premio += Number(v.premio_rainforest ?? 0);
       sacas += Number(v.sacas_vendidas ?? 0);
     }
-    
+
     return { bruto, liquido, recebido, saldo, premio, sacas };
   }, [vendasVisao]);
 
@@ -535,7 +540,9 @@ function VendaCard({
               </div>
               <div className="flex justify-between">
                 <span>Data Prêmio:</span>
-                <span className={!venda.data_recebimento_premio ? "text-destructive font-medium" : ""}>
+                <span
+                  className={!venda.data_recebimento_premio ? "text-destructive font-medium" : ""}
+                >
                   {venda.data_recebimento_premio ? dt(venda.data_recebimento_premio) : "Pendente"}
                 </span>
               </div>
@@ -569,8 +576,6 @@ function SectionHeader({ label, locked }: { label: string; locked?: boolean }) {
     </div>
   );
 }
-
-
 
 function NovaVendaDialog({
   open,
@@ -1150,7 +1155,6 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
-
           <SectionHeader label="Identificação & Armazém" />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
@@ -1576,7 +1580,9 @@ function RelatorioVendasDialog({
 
 function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda) => void }) {
   if (vendas.length === 0) {
-    return <p className="py-12 text-center text-sm text-muted-foreground">Nenhuma venda encontrada.</p>;
+    return (
+      <p className="py-12 text-center text-sm text-muted-foreground">Nenhuma venda encontrada.</p>
+    );
   }
 
   return (
@@ -1598,7 +1604,7 @@ function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda)
             const hasPending = hasPendingVendaData(venda);
             const status = getVendaEffectiveStatus(venda);
             const Icon = VENDA_STATUS_ICONS[status];
-            
+
             return (
               <tr
                 key={venda.id}
@@ -1609,7 +1615,9 @@ function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda)
               >
                 <td className="px-4 py-3 font-semibold">
                   <span className="flex items-center gap-2">
-                    {hasPending && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                    {hasPending && (
+                      <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                    )}
                     {venda.cliente || "Cliente não informado"}
                   </span>
                   {venda.tipo_venda && (
@@ -1624,11 +1632,19 @@ function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda)
                     {VENDA_STATUS_LABEL[status]}
                   </span>
                 </td>
-                <td className="px-4 py-3">{venda.sacas_vendidas ? `${num(venda.sacas_vendidas, 1)} sc` : "-"}</td>
+                <td className="px-4 py-3">
+                  {venda.sacas_vendidas ? `${num(venda.sacas_vendidas, 1)} sc` : "-"}
+                </td>
                 <td className="px-4 py-3">{venda.vl_bruto ? brl(venda.vl_bruto) : "-"}</td>
-                <td className="px-4 py-3">{venda.valor_recebido ? brl(venda.valor_recebido) : "-"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{venda.numero_lote_cooperativa || "-"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{venda.nf_premio_rainforest || "-"}</td>
+                <td className="px-4 py-3">
+                  {venda.valor_recebido ? brl(venda.valor_recebido) : "-"}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {venda.numero_lote_cooperativa || "-"}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {venda.nf_premio_rainforest || "-"}
+                </td>
               </tr>
             );
           })}
@@ -1637,4 +1653,3 @@ function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda)
     </div>
   );
 }
-

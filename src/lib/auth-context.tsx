@@ -1,10 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import {
-  apiClient,
-  getStoredToken,
-  setStoredToken,
-  clearStoredToken,
-} from "./api-client";
+import { apiClient, getStoredToken, setStoredToken, clearStoredToken } from "./api-client";
 
 export interface UserSession {
   id: string;
@@ -34,9 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const restore = async () => {
       const token = getStoredToken();
-      const storedSession = typeof window !== "undefined"
-        ? localStorage.getItem(SESSION_KEY)
-        : null;
+      const storedSession =
+        typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
 
       if (!token) {
         setIsLoading(false);
@@ -78,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
 
-    console.log("dat: ", data)
+    console.log("dat: ", data);
 
     setStoredToken(data.token);
     setUser(data.user);

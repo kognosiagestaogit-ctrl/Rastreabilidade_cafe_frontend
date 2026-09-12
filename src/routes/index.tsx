@@ -95,10 +95,33 @@ function Dashboard() {
       />
       <div className="space-y-6 p-4 sm:p-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Sacas produzidas" value={num(totalSacasProduzidas, 1)} icon={Coffee} hint={`${lotes.length} lote(s)`} />
-          <StatCard label="Sacas vendidas" value={num(totalSacasVendidas, 1)} icon={ShoppingCart} tone="accent" hint={`${vendas.length} venda(s)`} />
-          <StatCard label="Total faturado" value={brl(totalBruto)} icon={Award} tone="success" hint={`Recebido: ${brl(totalRecebido)}`} />
-          <StatCard label="A receber" value={brl(aReceber)} icon={Droplets} tone="warning" hint="Saldo das vendas em aberto" />
+          <StatCard
+            label="Sacas produzidas"
+            value={num(totalSacasProduzidas, 1)}
+            icon={Coffee}
+            hint={`${lotes.length} lote(s)`}
+          />
+          <StatCard
+            label="Sacas vendidas"
+            value={num(totalSacasVendidas, 1)}
+            icon={ShoppingCart}
+            tone="accent"
+            hint={`${vendas.length} venda(s)`}
+          />
+          <StatCard
+            label="Total faturado"
+            value={brl(totalBruto)}
+            icon={Award}
+            tone="success"
+            hint={`Recebido: ${brl(totalRecebido)}`}
+          />
+          <StatCard
+            label="A receber"
+            value={brl(aReceber)}
+            icon={Droplets}
+            tone="warning"
+            hint="Saldo das vendas em aberto"
+          />
         </div>
 
         <section className="rounded-xl border bg-card p-5">

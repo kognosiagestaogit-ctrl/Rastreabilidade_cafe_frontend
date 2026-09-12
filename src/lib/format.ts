@@ -1,7 +1,5 @@
 export const brl = (n: number | null | undefined) =>
-  n == null
-    ? "—"
-    : Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  n == null ? "—" : Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export const num = (n: number | null | undefined, digits = 0) =>
   n == null

@@ -42,7 +42,11 @@ export function EditableGrid<T extends { id: string }>({
   columns: GridColumn<T>[];
   groups?: GridGroup[];
   getRowKey?: (r: T) => string;
-  onSaveCell: (rowId: string, key: string, value: string | number | string[] | null) => Promise<void>;
+  onSaveCell: (
+    rowId: string,
+    key: string,
+    value: string | number | string[] | null,
+  ) => Promise<void>;
   onCreateRow: (initial: Record<string, string | number | string[] | null>) => Promise<string>;
   onDuplicateRow?: (rowId: string) => Promise<void>;
   onDeleteRow?: (rowId: string) => Promise<void>;
@@ -94,7 +98,9 @@ export function EditableGrid<T extends { id: string }>({
   return (
     <div className="rounded-xl border bg-card">
       <div className="flex items-center justify-between border-b px-3 py-2 text-xs text-muted-foreground">
-        <span>{rows.length} linha(s) — clique numa célula para editar. Tab/Enter avançam, ↑↓ navegam.</span>
+        <span>
+          {rows.length} linha(s) — clique numa célula para editar. Tab/Enter avançam, ↑↓ navegam.
+        </span>
         <SaveBadge status={status} />
       </div>
       <div ref={containerRef} className="max-h-[70vh] overflow-auto">
@@ -205,9 +211,24 @@ export function EditableGrid<T extends { id: string }>({
 }
 
 function SaveBadge({ status }: { status: SaveStatus }) {
-  if (status === "saving") return <span className="flex items-center gap-1 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Salvando…</span>;
-  if (status === "ok") return <span className="flex items-center gap-1 text-success-foreground"><Check className="h-3 w-3" /> Salvo</span>;
-  if (status === "error") return <span className="flex items-center gap-1 text-destructive"><AlertTriangle className="h-3 w-3" /> Erro ao salvar</span>;
+  if (status === "saving")
+    return (
+      <span className="flex items-center gap-1 text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
+      </span>
+    );
+  if (status === "ok")
+    return (
+      <span className="flex items-center gap-1 text-success-foreground">
+        <Check className="h-3 w-3" /> Salvo
+      </span>
+    );
+  if (status === "error")
+    return (
+      <span className="flex items-center gap-1 text-destructive">
+        <AlertTriangle className="h-3 w-3" /> Erro ao salvar
+      </span>
+    );
   return <span className="opacity-0">.</span>;
 }
 
@@ -247,10 +268,7 @@ function Cell<T extends { id: string }>({
     }
   }
 
-  const cellClass = cn(
-    "border-b border-r p-0 align-middle",
-    warn && "bg-warning/15",
-  );
+  const cellClass = cn("border-b border-r p-0 align-middle", warn && "bg-warning/15");
 
   if (col.type === "multiselect" && col.options) {
     const selected = Array.isArray(initial) ? (initial as string[]) : [];
@@ -274,7 +292,10 @@ function Cell<T extends { id: string }>({
               {col.options.map((o) => {
                 const checked = selected.includes(o.value);
                 return (
-                  <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-secondary">
+                  <label
+                    key={o.value}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-secondary"
+                  >
                     <Checkbox
                       checked={checked}
                       onCheckedChange={(v) => {
@@ -313,7 +334,9 @@ function Cell<T extends { id: string }>({
         >
           <option value="">—</option>
           {col.options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
           ))}
         </select>
       </td>
@@ -330,7 +353,13 @@ function Cell<T extends { id: string }>({
         onChange={(e) => setVal(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey) || e.key === "ArrowDown" || (e.key === "Tab" && e.shiftKey) || e.key === "ArrowUp") {
+          if (
+            e.key === "Enter" ||
+            (e.key === "Tab" && !e.shiftKey) ||
+            e.key === "ArrowDown" ||
+            (e.key === "Tab" && e.shiftKey) ||
+            e.key === "ArrowUp"
+          ) {
             void commit();
           }
           if (e.key === "Escape") {
@@ -395,7 +424,9 @@ function DraftRow<T extends { id: string }>({
               >
                 <option value="">—</option>
                 {c.options.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
             </td>
