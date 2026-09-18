@@ -13,7 +13,8 @@ export type Lote = {
   data_colheita_inicio: string | null;
   data_colheita_fim: string | null;
   status: LoteStatus;
-  data_entrada_terreiro: string | null;
+  data_entrada_terreiro_inicio: string | null;
+  data_entrada_terreiro_fim: string | null;
   data_saida_terreiro: string | null;
   data_entrada_secador: string | null;
   data_saida_secador: string | null;

@@ -84,7 +84,8 @@ const schema = z.object({
 });
 
 export function calculateLoteStatus(form: {
-  data_entrada_terreiro?: string | null;
+  data_entrada_terreiro_inicio?: string | null;
+  data_entrada_terreiro_fim?: string | null;
   data_saida_terreiro?: string | null;
   data_entrada_secador?: string | null;
   data_saida_secador?: string | null;
@@ -111,7 +112,7 @@ export function calculateLoteStatus(form: {
   ) {
     return "NO_SECADOR";
   }
-  if (form.data_entrada_terreiro || form.data_saida_terreiro) {
+  if (form.data_entrada_terreiro_inicio || form.data_entrada_terreiro_fim || form.data_saida_terreiro) {
     return "NO_TERREIRO";
   }
   return "EM_COLHEITA";
@@ -125,7 +126,7 @@ export function getLoteEffectiveStatus(lote: Lote): LoteStatus {
 }
 
 export function hasPendingData(lote: Lote): boolean {
-  const isTerreiroPending = lote.status === "NO_TERREIRO" && !lote.data_entrada_terreiro;
+  const isTerreiroPending = lote.status === "NO_TERREIRO" && !lote.data_entrada_terreiro_inicio;
   const isSecadorPending =
     lote.status === "NO_SECADOR" && (!lote.data_entrada_secador || lote.umidade == null);
   const isTulhaPending = lote.status === "NA_TULHA" && !lote.numero_tulha;
@@ -475,8 +476,8 @@ function LoteCard({
             <>
               <div className="flex justify-between">
                 <span>Data Entrada:</span>
-                <span className={!lote.data_entrada_terreiro ? "text-destructive font-medium" : ""}>
-                  {lote.data_entrada_terreiro ? dt(lote.data_entrada_terreiro) : "Pendente"}
+                <span className={!lote.data_entrada_terreiro_inicio ? "text-destructive font-medium" : ""}>
+                  {lote.data_entrada_terreiro_inicio ? dt(lote.data_entrada_terreiro_inicio) : "Pendente"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -679,7 +680,8 @@ function NovoLoteDialog({
     numero_sacas: "",
     observacoes: "",
     data_colheita_fim: "",
-    data_entrada_terreiro: "",
+    data_entrada_terreiro_inicio: "",
+    data_entrada_terreiro_fim: "",
     data_saida_terreiro: "",
     data_entrada_secador: "",
     data_saida_secador: "",
@@ -719,7 +721,7 @@ function NovoLoteDialog({
 
   const canFillTerreiro = isColheitaPreenchida;
   const isTerreiroPreenchido =
-    canFillTerreiro && (!!form.data_entrada_terreiro || !!form.data_saida_terreiro);
+    canFillTerreiro && (!!form.data_entrada_terreiro_inicio || !!form.data_entrada_terreiro_fim || !!form.data_saida_terreiro);
 
   const canFillSecador = isTerreiroPreenchido;
   const isSecadorPreenchido =
@@ -750,7 +752,8 @@ function NovoLoteDialog({
         data_colheita_fim: form.data_colheita_fim || null,
         numero_sacas: form.numero_sacas ? Number(form.numero_sacas) : null,
         observacoes: form.observacoes || null,
-        data_entrada_terreiro: form.data_entrada_terreiro || null,
+        data_entrada_terreiro_inicio: form.data_entrada_terreiro_inicio || null,
+        data_entrada_terreiro_fim: form.data_entrada_terreiro_fim || null,
         data_saida_terreiro: form.data_saida_terreiro || null,
         data_entrada_secador: form.data_entrada_secador || null,
         data_saida_secador: form.data_saida_secador || null,
@@ -778,7 +781,8 @@ function NovoLoteDialog({
         numero_sacas: "",
         observacoes: "",
         data_colheita_fim: "",
-        data_entrada_terreiro: "",
+        data_entrada_terreiro_inicio: "",
+        data_entrada_terreiro_fim: "",
         data_saida_terreiro: "",
         data_entrada_secador: "",
         data_saida_secador: "",
@@ -955,12 +959,21 @@ function NovoLoteDialog({
           <SectionHeader label="Terreiro" />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>Data entrada</Label>
+              <Label>Data entrada (Início)</Label>
               <Input
                 type="date"
                 className="h-12 text-base"
-                value={form.data_entrada_terreiro}
-                onChange={(e) => setForm({ ...form, data_entrada_terreiro: e.target.value })}
+                value={form.data_entrada_terreiro_inicio}
+                onChange={(e) => setForm({ ...form, data_entrada_terreiro_inicio: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Data entrada (Fim)</Label>
+              <Input
+                type="date"
+                className="h-12 text-base"
+                value={form.data_entrada_terreiro_fim}
+                onChange={(e) => setForm({ ...form, data_entrada_terreiro_fim: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
@@ -1164,7 +1177,8 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
     colheita_tipo: lote.colheita_tipo ?? "MANUAL",
     data_colheita_inicio: lote.data_colheita_inicio ?? "",
     data_colheita_fim: lote.data_colheita_fim ?? "",
-    data_entrada_terreiro: lote.data_entrada_terreiro ?? "",
+    data_entrada_terreiro_inicio: lote.data_entrada_terreiro_inicio ?? "",
+    data_entrada_terreiro_fim: lote.data_entrada_terreiro_fim ?? "",
     data_saida_terreiro: lote.data_saida_terreiro ?? "",
     data_entrada_secador: lote.data_entrada_secador ?? "",
     data_saida_secador: lote.data_saida_secador ?? "",
@@ -1218,7 +1232,8 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
         colheita_tipo: form.colheita_tipo,
         data_colheita_inicio: form.data_colheita_inicio || null,
         data_colheita_fim: form.data_colheita_fim || null,
-        data_entrada_terreiro: form.data_entrada_terreiro || null,
+        data_entrada_terreiro_inicio: form.data_entrada_terreiro_inicio || null,
+        data_entrada_terreiro_fim: form.data_entrada_terreiro_fim || null,
         data_saida_terreiro: form.data_saida_terreiro || null,
         data_entrada_secador: form.data_entrada_secador || null,
         data_saida_secador: form.data_saida_secador || null,
@@ -1258,7 +1273,7 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
 
   const canFillTerreiro = isColheitaPreenchida;
   const isTerreiroPreenchido =
-    canFillTerreiro && (!!form.data_entrada_terreiro || !!form.data_saida_terreiro);
+    canFillTerreiro && (!!form.data_entrada_terreiro_inicio || !!form.data_entrada_terreiro_fim || !!form.data_saida_terreiro);
 
   const canFillSecador = isTerreiroPreenchido;
   const isSecadorPreenchido =
@@ -1428,13 +1443,23 @@ function EditarLoteDialog({ lote, onClose }: { lote: Lote; onClose: () => void }
           <SectionHeader label="Terreiro" />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label className={!canFillTerreiro ? "opacity-50" : ""}>Data entrada</Label>
+              <Label className={!canFillTerreiro ? "opacity-50" : ""}>Data entrada (Início)</Label>
               <Input
                 type="date"
                 disabled={!canFillTerreiro}
                 className="h-12 text-base"
-                value={form.data_entrada_terreiro}
-                onChange={(e) => setForm({ ...form, data_entrada_terreiro: e.target.value })}
+                value={form.data_entrada_terreiro_inicio}
+                onChange={(e) => setForm({ ...form, data_entrada_terreiro_inicio: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label className={!canFillTerreiro ? "opacity-50" : ""}>Data entrada (Fim)</Label>
+              <Input
+                type="date"
+                disabled={!canFillTerreiro}
+                className="h-12 text-base"
+                value={form.data_entrada_terreiro_fim}
+                onChange={(e) => setForm({ ...form, data_entrada_terreiro_fim: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
