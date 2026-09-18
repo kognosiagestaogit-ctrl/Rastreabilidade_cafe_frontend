@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -1149,7 +1150,14 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Venda — {venda.cliente}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Venda — {venda.cliente}
+            {venda.lote_id && (
+              <Badge variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">
+                Lote Vinculado
+              </Badge>
+            )}
+          </DialogTitle>
           <DialogDescription>
             Atualize os dados e a etapa da venda será recalculada automaticamente.
           </DialogDescription>
