@@ -95,12 +95,58 @@ export function ConfigDialog({
     setBuscarResult(null);
     setVendasFetched(null);
     try {
-      const { data } = await apiClient.get<{ data: any[] }>(
-        `/api/integracoes/${existing.id}/buscar-registros?mes=${buscarMes}&ano=${buscarAno}`,
+      // 1. Pegar credenciais puras do back-end
+      const creds = await apiClient.get<{ username: string; password: string }>(
+        `/api/integracoes/${existing.id}/credenciais-puras`
       );
-      setVendasFetched(data || []);
-      if (data && data.length > 0) {
-        toast.success(`${data.length} registros encontrados!`);
+
+      const MINASUL_BASE = "https://apiportaldocooperado.minasul.com.br";
+      const headers = {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "access": "rtxiH3c6WSpQgQYpVN1AURcKbkxojXBT",
+      };
+
+      // 2. Fazer login direto do front-end para evitar bloqueio do Cloudflare
+      const loginRes = await fetch(`${MINASUL_BASE}/login`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ username: creds.username, password: creds.password })
+      });
+
+      if (!loginRes.ok) {
+        throw new Error("Usuário ou senha inválidos na Minasul.");
+      }
+
+      const loginData = await loginRes.json();
+      const token = loginData?.user?.token?.token;
+      if (!token) throw new Error("Falha ao obter token da Minasul.");
+
+      // 3. Calcular data inicial e final sem problema de fuso horário
+      const m = buscarMes.padStart(2, "0");
+      const dateIni = `${buscarAno}-${m}-01`;
+      const diasNoMes = new Date(Number(buscarAno), Number(m), 0).getDate();
+      const dateEnd = `${buscarAno}-${m}-${diasNoMes}`;
+
+      // 4. Buscar demonstrativos de vendas
+      const vendasRes = await fetch(`${MINASUL_BASE}/coffee/portal-sales-demonstrative-ax`, {
+        method: "POST",
+        headers: {
+          ...headers,
+          authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ dateIni, dateEnd, typeSales: "0", coffeePremiation: false })
+      });
+
+      if (!vendasRes.ok) {
+        throw new Error("Erro ao buscar demonstrativos na Minasul.");
+      }
+
+      const vendasData = await vendasRes.json();
+      setVendasFetched(vendasData || []);
+
+      if (vendasData && vendasData.length > 0) {
+        toast.success(`${vendasData.length} registros encontrados!`);
       } else {
         toast.info("Nenhum registro encontrado neste período.");
       }
