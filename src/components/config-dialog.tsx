@@ -53,6 +53,7 @@ import {
 interface IntegracaoCredencial {
   id: string;
   provider: string;
+  nome: string | null;
   username: string;
   has_credentials: boolean;
   status: string;
@@ -74,6 +75,7 @@ export function ConfigDialog({
   const [loadingFetch, setLoadingFetch] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [nome, setNome] = useState("");
   const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
@@ -229,10 +231,12 @@ export function ConfigDialog({
     try {
       await apiClient.post(`/api/fazendas/${fazendaAtual.id}/integracoes`, {
         provider: "minasul",
+        nome: nome.trim() || undefined,
         username: login.trim(),
         password: senha.trim(),
       });
       toast.success("Credenciais da Minasul salvas!");
+      setNome("");
       setLogin("");
       setSenha("");
       loadIntegracoes();
@@ -332,7 +336,9 @@ export function ConfigDialog({
                             <div key={integ.id} className="flex items-center justify-between p-2 rounded-md border bg-background text-sm">
                               <div className="flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                <span className="font-medium">{integ.username}</span>
+                                <span className="font-medium">
+                                  {integ.nome ? `${integ.nome} (${integ.username})` : integ.username}
+                                </span>
                               </div>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -367,6 +373,18 @@ export function ConfigDialog({
                     {/* Formulário para adicionar nova conta */}
                     <div className="grid gap-3 pt-4 border-t">
                       <Label className="text-muted-foreground">Adicionar Nova Conta</Label>
+                      
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="minasul-nome">Nome / Descrição (Opcional)</Label>
+                        <Input
+                          id="minasul-nome"
+                          placeholder="Ex: João, Sócio 1"
+                          value={nome}
+                          onChange={(e) => setNome(e.target.value)}
+                          autoComplete="off"
+                        />
+                      </div>
+
                       <div className="grid gap-1.5">
                         <Label htmlFor="minasul-login">Login / Matrícula</Label>
                         <Input
@@ -443,7 +461,7 @@ export function ConfigDialog({
                     <SelectContent>
                       {integracoes.map((integ) => (
                         <SelectItem key={integ.id} value={integ.id}>
-                          {integ.username}
+                          {integ.nome ? `${integ.nome} (${integ.username})` : integ.username}
                         </SelectItem>
                       ))}
                     </SelectContent>
