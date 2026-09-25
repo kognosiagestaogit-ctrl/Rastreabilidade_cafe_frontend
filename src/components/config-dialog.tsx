@@ -14,6 +14,7 @@ import {
   ChevronUp,
   Trash2,
   Download,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -39,6 +40,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
 import { useFazendas } from "@/lib/fazenda-context";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -62,7 +70,7 @@ export function ConfigDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { fazendaAtual } = useFazendas();
-  const [existing, setExisting] = useState<IntegracaoCredencial | null>(null);
+  const [integracoes, setIntegracoes] = useState<IntegracaoCredencial[]>([]);
   const [loadingFetch, setLoadingFetch] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -80,13 +88,20 @@ export function ConfigDialog({
 
   const [buscarMes, setBuscarMes] = useState(String(new Date().getMonth() + 1).padStart(2, "0"));
   const [buscarAno, setBuscarAno] = useState(new Date().getFullYear().toString());
+  const [selectedIntegracaoId, setSelectedIntegracaoId] = useState<string>("");
 
   const handleBuscar = async () => {
     if (!buscarMes || !buscarAno) {
       toast.error("Informe mês e ano.");
       return;
     }
-    if (!existing) {
+    if (!selectedIntegracaoId) {
+      toast.error("Selecione uma conta Minasul para buscar.");
+      return;
+    }
+
+    const integracao = integracoes.find((i) => i.id === selectedIntegracaoId);
+    if (!integracao) {
       toast.error("Integração não encontrada.");
       return;
     }
@@ -97,7 +112,7 @@ export function ConfigDialog({
     try {
       // 1. Pegar credenciais puras do back-end
       const creds = await apiClient.get<{ username: string; password: string }>(
-        `/api/integracoes/${existing.id}/credenciais-puras`
+        `/api/integracoes/${integracao.id}/credenciais-puras`
       );
 
       const MINASUL_BASE = "https://apiportaldocooperado.minasul.com.br";
@@ -115,7 +130,7 @@ export function ConfigDialog({
       });
 
       if (!loginRes.ok) {
-        throw new Error("Usuário ou senha inválidos na Minasul.");
+        throw new Error(`Usuário ou senha inválidos na Minasul (${integracao.username}).`);
       }
 
       const loginData = await loginRes.json();
@@ -148,7 +163,7 @@ export function ConfigDialog({
       if (vendasData && vendasData.length > 0) {
         toast.success(`${vendasData.length} registros encontrados!`);
       } else {
-        toast.info("Nenhum registro encontrado neste período.");
+        toast.info("Nenhum registro encontrado neste período para esta conta.");
       }
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao buscar registros na Minasul.");
@@ -158,11 +173,11 @@ export function ConfigDialog({
   };
 
   const handleImportar = async () => {
-    if (!vendasFetched || !existing) return;
+    if (!vendasFetched || !selectedIntegracaoId) return;
     setImportando(true);
     try {
       const res = await apiClient.post<{ resultados: { vendas: number; amostras: number } }>(
-        `/api/integracoes/${existing.id}/salvar-registros`,
+        `/api/integracoes/${selectedIntegracaoId}/salvar-registros`,
         { vendasResumo: vendasFetched },
       );
       setBuscarResult(res.resultados);
@@ -175,73 +190,52 @@ export function ConfigDialog({
     }
   };
 
-  // Busca integração existente ao abrir o modal
-  useEffect(() => {
-    if (!open || !fazendaAtual?.id) return;
+  const loadIntegracoes = () => {
+    if (!fazendaAtual?.id) return;
     setLoadingFetch(true);
     apiClient
       .get<IntegracaoCredencial[]>(`/api/fazendas/${fazendaAtual.id}/integracoes`)
       .then((list) => {
-        const minasul = list.find((i) => i.provider === "minasul") ?? null;
-        setExisting(minasul);
-        if (minasul) {
-          setLogin(minasul.username);
-          setSenha("");
-          setShowLogin(false);
-        } else {
-          setLogin("");
-          setSenha("");
-          setShowLogin(true);
+        const minasulList = list.filter((i) => i.provider === "minasul");
+        setIntegracoes(minasulList);
+        if (minasulList.length > 0 && !selectedIntegracaoId) {
+          setSelectedIntegracaoId(minasulList[0].id);
         }
       })
       .catch(() => {
         toast.error("Não foi possível carregar as configurações.");
       })
       .finally(() => setLoadingFetch(false));
+  };
+
+  // Busca integrações ao abrir o modal
+  useEffect(() => {
+    if (open) {
+      loadIntegracoes();
+    }
   }, [open, fazendaAtual?.id]);
 
-  const handleSave = async () => {
-    if (!login.trim()) {
-      toast.error("Informe o login da Minasul.");
+  const handleAddAccount = async () => {
+    if (!login.trim() || !senha.trim()) {
+      toast.error("Informe o login e a senha da Minasul.");
       return;
     }
-    if (!existing && !senha.trim()) {
-      toast.error("Informe a senha da Minasul.");
+    if (!fazendaAtual?.id) {
+      toast.error("Nenhuma fazenda selecionada.");
       return;
     }
 
     setSaving(true);
     try {
-      if (existing) {
-        const body: Record<string, string> = {
-          provider: "minasul",
-          username: login.trim(),
-        };
-        if (senha.trim()) body.password = senha.trim();
-
-        await apiClient.put(`/api/integracoes/${existing.id}`, body);
-        toast.success("Credenciais da Minasul atualizadas!");
-      } else {
-        if (!fazendaAtual?.id) {
-          toast.error("Nenhuma fazenda selecionada.");
-          return;
-        }
-        await apiClient.post(`/api/fazendas/${fazendaAtual.id}/integracoes`, {
-          provider: "minasul",
-          username: login.trim(),
-          password: senha.trim(),
-        });
-        toast.success("Credenciais da Minasul salvas!");
-      }
-
-      if (fazendaAtual?.id) {
-        const list = await apiClient.get<IntegracaoCredencial[]>(
-          `/api/fazendas/${fazendaAtual.id}/integracoes`,
-        );
-        const minasul = list.find((i) => i.provider === "minasul") ?? null;
-        setExisting(minasul);
-      }
+      await apiClient.post(`/api/fazendas/${fazendaAtual.id}/integracoes`, {
+        provider: "minasul",
+        username: login.trim(),
+        password: senha.trim(),
+      });
+      toast.success("Credenciais da Minasul salvas!");
+      setLogin("");
       setSenha("");
+      loadIntegracoes();
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao salvar credenciais.");
     } finally {
@@ -249,19 +243,17 @@ export function ConfigDialog({
     }
   };
 
-  const handleDelete = async () => {
-    if (!existing) return;
-
+  const handleDeleteAccount = async (id: string) => {
     setSaving(true);
     try {
-      await apiClient.delete(`/api/integracoes/${existing.id}`);
-      toast.success("Credenciais removidas!");
-      setExisting(null);
-      setLogin("");
-      setSenha("");
-      setShowLogin(true);
-      setBuscarResult(null);
-      setVendasFetched(null);
+      await apiClient.delete(`/api/integracoes/${id}`);
+      toast.success("Conta removida!");
+      if (selectedIntegracaoId === id) {
+        setSelectedIntegracaoId("");
+        setBuscarResult(null);
+        setVendasFetched(null);
+      }
+      loadIntegracoes();
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao remover credenciais.");
     } finally {
@@ -269,17 +261,15 @@ export function ConfigDialog({
     }
   };
 
-  const isEditing = !!existing;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" /> Configurações
           </DialogTitle>
           <DialogDescription>
-            Gerencie as configurações e integrações da plataforma.
+            Gerencie as configurações e contas vinculadas da fazenda.
           </DialogDescription>
         </DialogHeader>
 
@@ -292,7 +282,7 @@ export function ConfigDialog({
             >
               <div>
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
-                  Minasul credenciais
+                  Contas Minasul
                   {showLogin ? (
                     <ChevronUp className="h-4 w-4 text-muted-foreground" />
                   ) : (
@@ -300,7 +290,7 @@ export function ConfigDialog({
                   )}
                 </h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Será usado para buscar dados automaticamente em minasul.
+                  Adicione um ou mais cooperados para importar os registros.
                 </p>
               </div>
 
@@ -308,23 +298,15 @@ export function ConfigDialog({
               {!loadingFetch && (
                 <span
                   className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                    isEditing
-                      ? existing?.status === "ERRO"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    integracoes.length > 0
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {isEditing ? (
-                    existing?.status === "ERRO" ? (
-                      <>
-                        <AlertCircle className="h-3 w-3" /> Erro
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-3 w-3" /> Configurado
-                      </>
-                    )
+                  {integracoes.length > 0 ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3" /> {integracoes.length} Ativa(s)
+                    </>
                   ) : (
                     "Não configurado"
                   )}
@@ -339,100 +321,105 @@ export function ConfigDialog({
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <div className="grid gap-3">
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="minasul-login">Login</Label>
-                      <Input
-                        id="minasul-login"
-                        placeholder="Digite o login"
-                        value={login}
-                        onChange={(e) => setLogin(e.target.value)}
-                        autoComplete="off"
-                      />
-                    </div>
+                  <div className="grid gap-6">
+                    
+                    {/* Lista de contas existentes */}
+                    {integracoes.length > 0 && (
+                      <div className="grid gap-2">
+                        <Label>Contas Cadastradas</Label>
+                        <div className="flex flex-col gap-2">
+                          {integracoes.map((integ) => (
+                            <div key={integ.id} className="flex items-center justify-between p-2 rounded-md border bg-background text-sm">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                <span className="font-medium">{integ.username}</span>
+                              </div>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remover conta {integ.username}?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Essa ação removerá as credenciais permanentemente, e não será mais possível importar registros para este usuário.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteAccount(integ.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Sim, remover
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="minasul-senha">
-                        Senha{isEditing && " (deixe em branco para não alterar)"}
-                      </Label>
-                      <div className="relative">
+                    {/* Formulário para adicionar nova conta */}
+                    <div className="grid gap-3 pt-4 border-t">
+                      <Label className="text-muted-foreground">Adicionar Nova Conta</Label>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="minasul-login">Login / Matrícula</Label>
                         <Input
-                          id="minasul-senha"
-                          type={showSenha ? "text" : "password"}
-                          placeholder={isEditing ? "••••••••" : "Digite a senha"}
-                          value={senha}
-                          onChange={(e) => setSenha(e.target.value)}
-                          autoComplete="new-password"
-                          className="pr-10"
+                          id="minasul-login"
+                          placeholder="Digite o login"
+                          value={login}
+                          onChange={(e) => setLogin(e.target.value)}
+                          autoComplete="off"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowSenha((v) => !v)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          tabIndex={-1}
-                        >
-                          {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="minasul-senha">Senha</Label>
+                        <div className="relative">
+                          <Input
+                            id="minasul-senha"
+                            type={showSenha ? "text" : "password"}
+                            placeholder="Digite a senha"
+                            value={senha}
+                            onChange={(e) => setSenha(e.target.value)}
+                            autoComplete="new-password"
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowSenha((v) => !v)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            tabIndex={-1}
+                          >
+                            {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end mt-2">
+                        <Button onClick={handleAddAccount} disabled={saving || !login || !senha} className="gap-2 w-full sm:w-auto">
+                          {saving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="h-4 w-4" />
+                          )}
+                          Vincular Conta
+                        </Button>
                       </div>
                     </div>
 
-                    {/* Mensagem de erro da integração */}
-                    {existing?.status === "ERRO" && existing.error_message && (
-                      <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                        {existing.error_message}
-                      </p>
-                    )}
                   </div>
                 )}
-
-                <div className="mt-4 flex justify-end gap-2">
-                  {isEditing && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          disabled={saving || loadingFetch}
-                          className="gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" /> Limpar registro
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Isso removerá permanentemente as credenciais da Minasul. Essa ação não
-                            pode ser desfeita e a sincronização automática parará de funcionar até
-                            que novas credenciais sejam configuradas.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDelete}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Sim, limpar credenciais
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                  <Button onClick={handleSave} disabled={saving || loadingFetch} className="gap-2">
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    {isEditing ? "Atualizar credenciais" : "Salvar credenciais"}
-                  </Button>
-                </div>
               </>
             )}
           </div>
 
-          {isEditing && (
+          {integracoes.length > 0 && (
             <div className="rounded-lg border bg-secondary/30 p-4">
               <div className="mb-4">
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -440,42 +427,60 @@ export function ConfigDialog({
                   Buscar registros por período (Minasul)
                 </h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Busque vendas e amostras na Minasul e escolha importar.
+                  Busque vendas e amostras na Minasul de um cooperado específico.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 mb-4">
-                <div className="grid gap-1.5 flex-1">
-                  <Label htmlFor="buscar-mes" className="text-xs">
-                    Mês
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="selecionar-conta" className="text-xs">
+                    Cooperado / Conta
                   </Label>
-                  <Input
-                    id="buscar-mes"
-                    placeholder="Ex: 05"
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={buscarMes}
-                    onChange={(e) => setBuscarMes(e.target.value)}
-                  />
+                  <Select value={selectedIntegracaoId} onValueChange={setSelectedIntegracaoId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {integracoes.map((integ) => (
+                        <SelectItem key={integ.id} value={integ.id}>
+                          {integ.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="grid gap-1.5 flex-1">
-                  <Label htmlFor="buscar-ano" className="text-xs">
-                    Ano
-                  </Label>
-                  <Input
-                    id="buscar-ano"
-                    placeholder="Ex: 2024"
-                    type="number"
-                    min="2000"
-                    value={buscarAno}
-                    onChange={(e) => setBuscarAno(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-1.5 self-end">
+
+                <div className="flex items-end gap-2">
+                  <div className="grid gap-1.5 flex-1">
+                    <Label htmlFor="buscar-mes" className="text-xs">
+                      Mês
+                    </Label>
+                    <Input
+                      id="buscar-mes"
+                      placeholder="Ex: 05"
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={buscarMes}
+                      onChange={(e) => setBuscarMes(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-1.5 flex-1">
+                    <Label htmlFor="buscar-ano" className="text-xs">
+                      Ano
+                    </Label>
+                    <Input
+                      id="buscar-ano"
+                      placeholder="Ex: 2024"
+                      type="number"
+                      min="2000"
+                      value={buscarAno}
+                      onChange={(e) => setBuscarAno(e.target.value)}
+                    />
+                  </div>
                   <Button
                     onClick={handleBuscar}
-                    disabled={buscarLoading}
+                    disabled={buscarLoading || !selectedIntegracaoId}
                     className="gap-2 shrink-0"
                   >
                     {buscarLoading ? (
@@ -516,7 +521,7 @@ export function ConfigDialog({
               {vendasFetched !== null && vendasFetched.length === 0 && (
                 <div className="mt-4 pt-4 border-t border-border/50">
                   <p className="text-sm text-center text-muted-foreground py-2">
-                    Nenhum registro encontrado no período.
+                    Nenhum registro encontrado no período para esta conta.
                   </p>
                 </div>
               )}
