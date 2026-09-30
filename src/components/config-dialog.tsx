@@ -160,11 +160,42 @@ export function ConfigDialog({
       }
 
       const vendasData = await vendasRes.json();
-      setVendasFetched(vendasData || []);
 
       if (vendasData && vendasData.length > 0) {
-        toast.success(`${vendasData.length} registros encontrados!`);
+        const enrichedVendas = await Promise.all(
+          vendasData.map(async (venda: any) => {
+            try {
+              const detailRes = await fetch(`${MINASUL_BASE}/coffee/portal-demonstrative-details-ax`, {
+                method: "POST",
+                headers: {
+                  ...headers,
+                  authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  salesId: venda.COOPBATCHFORSALESID,
+                  coopBatchId: venda.COOPBATCHID,
+                  origin: "portal",
+                }),
+              });
+
+              if (detailRes.ok) {
+                const detailJson = await detailRes.json();
+                if (detailJson?.SalesStatement?.response) {
+                  const detailsObj = JSON.parse(detailJson.SalesStatement.response);
+                  return { ...venda, DETAILS_EXTRA: detailsObj };
+                }
+              }
+            } catch (err) {
+              console.error("Erro detalhes venda:", venda.COOPBATCHFORSALESID, err);
+            }
+            return venda;
+          }),
+        );
+
+        setVendasFetched(enrichedVendas);
+        toast.success(`${enrichedVendas.length} registros encontrados!`);
       } else {
+        setVendasFetched([]);
         toast.info("Nenhum registro encontrado neste período para esta conta.");
       }
     } catch (err: any) {
