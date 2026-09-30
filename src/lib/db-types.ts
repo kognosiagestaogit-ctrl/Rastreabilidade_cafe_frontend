@@ -61,6 +61,8 @@ export type Venda = {
   lotes_agrupados: string | null;
   sobras_sacas: number | null;
   descontos: number | null;
+  duplicata_financeiro: number | null;
+  adiantamento: number | null;
   conta_corrente: string | null;
   is_ds: number | null;
   data_recebimento_premio: string | null;

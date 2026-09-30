@@ -178,6 +178,8 @@ const vendaSchema = z.object({
   amostra: z.string().trim().max(120).optional().or(z.literal("")),
   lotes_agrupados: z.string().trim().max(500).optional().or(z.literal("")),
   descontos: z.string().optional().or(z.literal("")),
+  duplicata_financeiro: z.string().optional().or(z.literal("")),
+  adiantamento: z.string().optional().or(z.literal("")),
   conta_corrente: z.string().trim().max(120).optional().or(z.literal("")),
   is_ds: z.string().optional().or(z.literal("")),
   sobras_sacas: z.string().optional().or(z.literal("")),
@@ -682,6 +684,8 @@ function NovaVendaDialog({
     amostra: "",
     lotes_agrupados: "",
     descontos: "",
+    duplicata_financeiro: "",
+    adiantamento: "",
     conta_corrente: "",
     is_ds: "",
     data_recebimento_premio: "",
@@ -745,6 +749,8 @@ function NovaVendaDialog({
         a_receber_previsto: canFillVendaSafra ? vlLiquido : null,
         lotes_agrupados: canFillVendaSafra ? parsed.lotes_agrupados || null : null,
         descontos: canFillVendaSafra && parsed.descontos ? Number(parsed.descontos) : null,
+        duplicata_financeiro: canFillVendaSafra && parsed.duplicata_financeiro ? Number(parsed.duplicata_financeiro) : null,
+        adiantamento: canFillVendaSafra && parsed.adiantamento ? Number(parsed.adiantamento) : null,
 
         // Recebimento
         data_recebimento: canFillRecebimento ? parsed.data_recebimento || null : null,
@@ -994,6 +1000,28 @@ function NovaVendaDialog({
                 onChange={(e) => setForm({ ...form, descontos: e.target.value })}
               />
             </div>
+            <div className="grid gap-2">
+              <Label className={!canFillVendaSafra ? "opacity-50" : ""}>Duplicata / Financeiro (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                disabled={!canFillVendaSafra}
+                className="h-12 text-base"
+                value={form.duplicata_financeiro}
+                onChange={(e) => setForm({ ...form, duplicata_financeiro: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label className={!canFillVendaSafra ? "opacity-50" : ""}>Adiantamento (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                disabled={!canFillVendaSafra}
+                className="h-12 text-base"
+                value={form.adiantamento}
+                onChange={(e) => setForm({ ...form, adiantamento: e.target.value })}
+              />
+            </div>
           </div>
 
           <SectionHeader label="Recebimento" locked={!canFillRecebimento} />
@@ -1139,6 +1167,8 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
     amostra: venda.amostra ?? "",
     lotes_agrupados: venda.lotes_agrupados ?? "",
     descontos: venda.descontos?.toString() ?? "",
+    duplicata_financeiro: venda.duplicata_financeiro?.toString() ?? "",
+    adiantamento: venda.adiantamento?.toString() ?? "",
     conta_corrente: venda.conta_corrente ?? "",
     is_ds: venda.is_ds?.toString() ?? "",
     sobras_sacas: venda.sobras_sacas?.toString() ?? "",
@@ -1187,6 +1217,8 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
         amostra: parsed.amostra || null,
         lotes_agrupados: parsed.lotes_agrupados || null,
         descontos: parsed.descontos ? Number(parsed.descontos) : null,
+        duplicata_financeiro: parsed.duplicata_financeiro ? Number(parsed.duplicata_financeiro) : null,
+        adiantamento: parsed.adiantamento ? Number(parsed.adiantamento) : null,
         conta_corrente: parsed.conta_corrente || null,
         is_ds: parsed.is_ds ? Number(parsed.is_ds) : null,
         data_recebimento_premio: parsed.data_recebimento_premio || null,
@@ -1379,6 +1411,36 @@ export function EditarVendaDialog({ venda, onClose }: { venda: Venda; onClose: (
                 onChange={(e) => setForm({ ...form, lotes_agrupados: e.target.value })}
               />
             </div>
+            <div className="grid gap-2">
+              <Label>Descontos (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                className="h-12 text-base"
+                value={form.descontos}
+                onChange={(e) => setForm({ ...form, descontos: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Duplicata / Financeiro (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                className="h-12 text-base"
+                value={form.duplicata_financeiro}
+                onChange={(e) => setForm({ ...form, duplicata_financeiro: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Adiantamento (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                className="h-12 text-base"
+                value={form.adiantamento}
+                onChange={(e) => setForm({ ...form, adiantamento: e.target.value })}
+              />
+            </div>
           </div>
 
           <SectionHeader label="Recebimento" />
@@ -1538,6 +1600,8 @@ function RelatorioVendasDialog({
           "A receber previsto (R$)": v.a_receber_previsto ?? null,
           "Soma dos lotes": v.lotes_agrupados ?? "",
           "Descontos (R$)": v.descontos ?? null,
+          "Duplicata/Fin. (R$)": v.duplicata_financeiro ?? null,
+          "Adiantamento (R$)": v.adiantamento ?? null,
           Observações: v.observacoes ?? "",
           "Valor recebido (R$)": v.valor_recebido ?? null,
           "Data recebimento": v.data_recebimento ?? "",
