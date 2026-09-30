@@ -162,9 +162,11 @@ export function ConfigDialog({
       const vendasData = await vendasRes.json();
 
       if (vendasData && vendasData.length > 0) {
+        console.log(`[Minasul] Buscando detalhes para ${vendasData.length} vendas...`);
         const enrichedVendas = await Promise.all(
           vendasData.map(async (venda: any) => {
             try {
+              console.log(`[Minasul] Detalhes para salesId=${venda.COOPBATCHFORSALESID}, coopBatchId=${venda.COOPBATCHID}`);
               const detailRes = await fetch(`${MINASUL_BASE}/coffee/portal-demonstrative-details-ax`, {
                 method: "POST",
                 headers: {
@@ -178,19 +180,47 @@ export function ConfigDialog({
                 }),
               });
 
+              console.log(`[Minasul] Detail response status: ${detailRes.status}`);
+
               if (detailRes.ok) {
                 const detailJson = await detailRes.json();
+                console.log(`[Minasul] Detail JSON keys:`, Object.keys(detailJson));
+                console.log(`[Minasul] SalesStatement exists:`, !!detailJson?.SalesStatement);
+                console.log(`[Minasul] response type:`, typeof detailJson?.SalesStatement?.response);
+
                 if (detailJson?.SalesStatement?.response) {
                   const detailsObj = JSON.parse(detailJson.SalesStatement.response);
+                  console.log(`[Minasul] Parsed details:`, {
+                    DuplicateFinancing: detailsObj.DuplicateFinancing,
+                    AdditionAmount: detailsObj.AdditionAmount,
+                    SecondDiscountAmount: detailsObj.SecondDiscountAmount,
+                    Discount: detailsObj.Discount,
+                  });
                   return { ...venda, DETAILS_EXTRA: detailsObj };
+                } else {
+                  console.warn(`[Minasul] SalesStatement.response não encontrado no JSON`);
                 }
+              } else {
+                const errText = await detailRes.text().catch(() => "");
+                console.error(`[Minasul] Detail request failed: ${detailRes.status}`, errText.substring(0, 200));
               }
             } catch (err) {
-              console.error("Erro detalhes venda:", venda.COOPBATCHFORSALESID, err);
+              console.error("[Minasul] Erro detalhes venda:", venda.COOPBATCHFORSALESID, err);
             }
             return venda;
           }),
         );
+
+        // Log final para confirmar enrichment
+        const withDetails = enrichedVendas.filter((v: any) => !!v.DETAILS_EXTRA);
+        console.log(`[Minasul] Enriquecidos: ${withDetails.length}/${enrichedVendas.length}`);
+        if (withDetails.length > 0) {
+          console.log(`[Minasul] Exemplo DETAILS_EXTRA:`, {
+            DuplicateFinancing: withDetails[0].DETAILS_EXTRA?.DuplicateFinancing,
+            AdditionAmount: withDetails[0].DETAILS_EXTRA?.AdditionAmount,
+            SecondDiscountAmount: withDetails[0].DETAILS_EXTRA?.SecondDiscountAmount,
+          });
+        }
 
         setVendasFetched(enrichedVendas);
         toast.success(`${enrichedVendas.length} registros encontrados!`);
