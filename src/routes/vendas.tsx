@@ -1668,6 +1668,8 @@ function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda)
           <tr className="border-b bg-secondary/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <th className="px-4 py-3">Cliente</th>
             <th className="px-4 py-3">Etapa</th>
+            <th className="px-4 py-3">Data Colheita</th>
+            <th className="px-4 py-3">Núm. Amostra</th>
             <th className="px-4 py-3">Sacas</th>
             <th className="px-4 py-3">Valor Bruto</th>
             <th className="px-4 py-3">Recebido</th>
@@ -1707,6 +1709,12 @@ function VendaListView({ vendas, onEdit }: { vendas: Venda[]; onEdit: (v: Venda)
                     <Icon className="h-3 w-3 shrink-0" />
                     {VENDA_STATUS_LABEL[status]}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                  {venda.data_colheita ? dt(venda.data_colheita) : "-"}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {venda.amostra || "-"}
                 </td>
                 <td className="px-4 py-3">
                   {venda.sacas_vendidas ? `${num(venda.sacas_vendidas, 1)} sc` : "-"}

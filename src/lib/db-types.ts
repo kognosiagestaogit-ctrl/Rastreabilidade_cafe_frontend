@@ -65,6 +65,7 @@ export type Venda = {
   is_ds: number | null;
   data_recebimento_premio: string | null;
   status?: string | null;
+  data_colheita?: string | null;
 };
 
 export type Amostra = {
