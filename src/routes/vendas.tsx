@@ -19,7 +19,7 @@ import {
   ArrowRight,
   Lock,
   Trash2,
-  Calendar,
+  Calendar as CalendarIcon,
   Filter,
   RotateCcw,
   LayoutGrid,
@@ -60,6 +60,11 @@ import { mockDb } from "@/lib/mock-db";
 import { brl, dt, num } from "@/lib/format";
 import type { Venda, Amostra } from "@/lib/db-types";
 import { apiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const searchSchema = z.object({
   visao: z.enum(["todas", "receber", "rainforest"]).default("todas").catch("todas"),
@@ -186,9 +191,13 @@ export function VendasPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const [buscaDraft, setBuscaDraft] = useState("");
   const [visaoDraft, setVisaoDraft] = useState<Visao>("todas");
+  const [dataInicioDraft, setDataInicioDraft] = useState("");
+  const [dataFimDraft, setDataFimDraft] = useState("");
 
   const [buscaApplied, setBuscaApplied] = useState("");
   const [visaoApplied, setVisaoApplied] = useState<Visao>("todas");
+  const [dataInicioApplied, setDataInicioApplied] = useState("");
+  const [dataFimApplied, setDataFimApplied] = useState("");
 
   const [novaOpen, setNovaOpen] = useState(false);
   const [editVenda, setEditVenda] = useState<Venda | null>(null);
@@ -197,14 +206,20 @@ export function VendasPage() {
   const handleApplyFilters = () => {
     setBuscaApplied(buscaDraft);
     setVisaoApplied(visaoDraft);
+    setDataInicioApplied(dataInicioDraft);
+    setDataFimApplied(dataFimDraft);
     toast.success("Filtros aplicados");
   };
 
   const handleClearFilters = () => {
     setBuscaDraft("");
     setVisaoDraft("todas");
+    setDataInicioDraft("");
+    setDataFimDraft("");
     setBuscaApplied("");
     setVisaoApplied("todas");
+    setDataInicioApplied("");
+    setDataFimApplied("");
     toast.info("Filtros limpos");
   };
 
@@ -226,6 +241,17 @@ export function VendasPage() {
         if (saldo <= 0.01) return false;
       }
       if (visaoApplied === "rainforest" && !(Number(v.premio_rainforest ?? 0) > 0)) return false;
+      
+      if (dataInicioApplied && v.data_venda) {
+        if (new Date(v.data_venda) < new Date(dataInicioApplied)) return false;
+      }
+      if (dataFimApplied && v.data_venda) {
+        if (new Date(v.data_venda) > new Date(dataFimApplied)) return false;
+      }
+      if ((dataInicioApplied || dataFimApplied) && !v.data_venda) {
+        return false;
+      }
+
       const termo = buscaApplied.trim().toLowerCase();
       if (!termo) return true;
       return [v.cliente, v.numero_lote_cooperativa, v.nf_venda, v.padrao].some((c) =>
@@ -234,7 +260,7 @@ export function VendasPage() {
           .includes(termo),
       );
     });
-  }, [vendas, visaoApplied, buscaApplied]);
+  }, [vendas, visaoApplied, buscaApplied, dataInicioApplied, dataFimApplied]);
 
   const totais = useMemo(() => {
     let bruto = 0,
@@ -341,6 +367,48 @@ export function VendasPage() {
               className="h-10 pl-9"
             />
           </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-10 w-[260px] justify-start text-left font-normal bg-background",
+                  !dataInicioDraft && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataInicioDraft ? (
+                  dataFimDraft ? (
+                    <>
+                      {format(parseISO(dataInicioDraft), "dd/MM/yy")} -{" "}
+                      {format(parseISO(dataFimDraft), "dd/MM/yy")}
+                    </>
+                  ) : (
+                    format(parseISO(dataInicioDraft), "dd/MM/yyyy")
+                  )
+                ) : (
+                  <span>Período da venda</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dataInicioDraft ? parseISO(dataInicioDraft) : undefined}
+                selected={{
+                  from: dataInicioDraft ? parseISO(dataInicioDraft) : undefined,
+                  to: dataFimDraft ? parseISO(dataFimDraft) : undefined
+                }}
+                onSelect={(range: any) => {
+                  setDataInicioDraft(range?.from ? format(range.from, "yyyy-MM-dd") : "");
+                  setDataFimDraft(range?.to ? format(range.to, "yyyy-MM-dd") : "");
+                }}
+                numberOfMonths={2}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
           <Button onClick={handleApplyFilters} className="h-10 gap-2">
             <Filter className="h-4 w-4" /> Aplicar filtros
           </Button>
