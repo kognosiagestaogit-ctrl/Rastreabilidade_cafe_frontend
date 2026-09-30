@@ -150,22 +150,32 @@ function LotesPage() {
   const [editLote, setEditLote] = useState<Lote | null>(null);
   const [buscaDraft, setBuscaDraft] = useState("");
   const [safraDraft, setSafraDraft] = useState<string>("TODAS");
+  const [dataInicioDraft, setDataInicioDraft] = useState("");
+  const [dataFimDraft, setDataFimDraft] = useState("");
 
   const [buscaApplied, setBuscaApplied] = useState("");
   const [safraApplied, setSafraApplied] = useState<string>("TODAS");
+  const [dataInicioApplied, setDataInicioApplied] = useState("");
+  const [dataFimApplied, setDataFimApplied] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   const handleApplyFilters = () => {
     setBuscaApplied(buscaDraft);
     setSafraApplied(safraDraft);
+    setDataInicioApplied(dataInicioDraft);
+    setDataFimApplied(dataFimDraft);
     toast.success("Filtros aplicados");
   };
 
   const handleClearFilters = () => {
     setBuscaDraft("");
     setSafraDraft("TODAS");
+    setDataInicioDraft("");
+    setDataFimDraft("");
     setBuscaApplied("");
     setSafraApplied("TODAS");
+    setDataInicioApplied("");
+    setDataFimApplied("");
     toast.info("Filtros limpos");
   };
 
@@ -223,6 +233,17 @@ function LotesPage() {
     const termo = buscaApplied.trim().toLowerCase();
     return lotes.filter((l) => {
       if (safraApplied !== "TODAS" && String(l.safra) !== safraApplied) return false;
+      
+      if (dataInicioApplied && l.data_colheita_inicio) {
+        if (new Date(l.data_colheita_inicio) < new Date(dataInicioApplied)) return false;
+      }
+      if (dataFimApplied && l.data_colheita_inicio) {
+        if (new Date(l.data_colheita_inicio) > new Date(dataFimApplied)) return false;
+      }
+      if ((dataInicioApplied || dataFimApplied) && !l.data_colheita_inicio) {
+        return false;
+      }
+
       if (!termo) return true;
       const campos = [
         l.numero_lote_fazenda,
@@ -237,7 +258,7 @@ function LotesPage() {
           .includes(termo),
       );
     });
-  }, [lotes, buscaApplied, safraApplied]);
+  }, [lotes, buscaApplied, safraApplied, dataInicioApplied, dataFimApplied]);
 
   return (
     <>
@@ -290,6 +311,25 @@ function LotesPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-2 rounded-md border p-1 bg-background h-11">
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={dataInicioDraft}
+                    onChange={(e) => setDataInicioDraft(e.target.value)}
+                    className="h-9 w-[130px] border-none shadow-none text-xs bg-transparent"
+                  />
+                </div>
+                <span className="text-muted-foreground text-xs font-medium px-1">até</span>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={dataFimDraft}
+                    onChange={(e) => setDataFimDraft(e.target.value)}
+                    className="h-9 w-[130px] border-none shadow-none text-xs bg-transparent"
+                  />
+                </div>
+              </div>
               <Button onClick={handleApplyFilters} className="h-11 gap-2">
                 <Filter className="h-4 w-4" /> Aplicar filtros
               </Button>
