@@ -6,7 +6,7 @@ import {
   Coffee,
   ArrowRight,
   Droplets,
-  Calendar,
+  Calendar as CalendarIcon,
   AlertTriangle,
   Search,
   Trash2,
@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { apiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,9 @@ import { mockDb } from "@/lib/mock-db";
 import { STATUS_ORDER, STATUS_LABEL, dt, num, type LoteStatus } from "@/lib/format";
 import type { Lote, Talhao } from "@/lib/db-types";
 import { EditableGrid, type GridColumn, type GridGroup } from "@/components/editable-grid";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/lotes")({
   head: () => ({ meta: [{ title: "Lotes — Gestão Pedra Negra" }] }),
@@ -311,25 +315,48 @@ function LotesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-2 rounded-md border p-1 bg-background h-11">
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={dataInicioDraft}
-                    onChange={(e) => setDataInicioDraft(e.target.value)}
-                    className="h-9 w-[130px] border-none shadow-none text-xs bg-transparent"
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-11 w-[260px] justify-start text-left font-normal bg-background",
+                      !dataInicioDraft && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dataInicioDraft ? (
+                      dataFimDraft ? (
+                        <>
+                          {format(parseISO(dataInicioDraft), "dd/MM/yy")} -{" "}
+                          {format(parseISO(dataFimDraft), "dd/MM/yy")}
+                        </>
+                      ) : (
+                        format(parseISO(dataInicioDraft), "dd/MM/yyyy")
+                      )
+                    ) : (
+                      <span>Período de colheita</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dataInicioDraft ? parseISO(dataInicioDraft) : undefined}
+                    selected={{
+                      from: dataInicioDraft ? parseISO(dataInicioDraft) : undefined,
+                      to: dataFimDraft ? parseISO(dataFimDraft) : undefined
+                    }}
+                    onSelect={(range: any) => {
+                      setDataInicioDraft(range?.from ? format(range.from, "yyyy-MM-dd") : "");
+                      setDataFimDraft(range?.to ? format(range.to, "yyyy-MM-dd") : "");
+                    }}
+                    numberOfMonths={2}
+                    locale={ptBR}
                   />
-                </div>
-                <span className="text-muted-foreground text-xs font-medium px-1">até</span>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={dataFimDraft}
-                    onChange={(e) => setDataFimDraft(e.target.value)}
-                    className="h-9 w-[130px] border-none shadow-none text-xs bg-transparent"
-                  />
-                </div>
-              </div>
+                </PopoverContent>
+              </Popover>
               <Button onClick={handleApplyFilters} className="h-11 gap-2">
                 <Filter className="h-4 w-4" /> Aplicar filtros
               </Button>
