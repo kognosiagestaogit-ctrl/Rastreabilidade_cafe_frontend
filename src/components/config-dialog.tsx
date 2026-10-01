@@ -195,6 +195,7 @@ export function ConfigDialog({
                     AdditionAmount: detailsObj.AdditionAmount,
                     SecondDiscountAmount: detailsObj.SecondDiscountAmount,
                     Discount: detailsObj.Discount,
+                    NetAmountToPay: detailsObj.NetAmountToPay,
                   });
                   return { ...venda, DETAILS_EXTRA: detailsObj };
                 } else {
